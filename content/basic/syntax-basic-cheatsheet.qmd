@@ -1,0 +1,306 @@
+# C# Basic Syntax CheatSheet
+
+*For developers coming from Python/Dart/JavaScript*
+
+## Variables & Data Types
+
+```csharp
+// Explicit type declarations
+int age = 35;
+double height = 175.5;
+string name = "Dr. Smith";
+bool isRadiologist = true;
+char grade = 'A';
+
+// Type inference with 'var' - compiler determines type
+var experienceYears = 10;        // int
+var hospitalName = "Bangkok";    // string
+
+// Constants
+const double PI = 3.14159;
+readonly string AppName = "RadiologyApp";  // can only be set once
+
+// Nullable types (can hold null)
+int? patientAge = null;          // nullable int
+string? diagnosis = null;        // nullable string
+```
+
+## String Interpolation & Formatting
+
+```csharp
+string name = "John";
+int age = 30;
+
+// String interpolation (like Python f-strings)
+string message = $"Patient: {name}, Age: {age}";
+
+// Formatting numbers
+double bmi = 23.456;
+Console.WriteLine($"BMI: {bmi:F1}");     // 23.5 (1 decimal)
+Console.WriteLine($"BMI: {bmi:F2}");     // 23.46 (2 decimals)
+Console.WriteLine($"Price: {price:C}");   // Currency format
+
+// Multi-line strings
+string report = $@"
+Patient: {name}
+Age: {age}
+Status: Active
+";
+```
+
+## Collections
+
+```csharp
+// Arrays (fixed size)
+string[] modalities = {"CT", "MRI", "X-Ray", "Ultrasound"};
+int[] numbers = new int[5];  // array of 5 integers (all 0)
+
+// Lists (dynamic arrays - like Python lists)
+var scanTypes = new List<string> {"Brain", "Chest", "Abdomen"};
+scanTypes.Add("Cardiac");           // add element
+scanTypes.Remove("Brain");          // remove element
+int count = scanTypes.Count;        // get count
+
+// Dictionary (key-value pairs - like Python dict)
+var examCodes = new Dictionary<string, int>
+{
+    {"CT Head", 70450},
+    {"MRI Brain", 70551},
+    {"Chest X-Ray", 71020}
+};
+
+// Access dictionary
+int code = examCodes["CT Head"];
+examCodes["New Exam"] = 12345;      // add new key-value
+bool exists = examCodes.ContainsKey("CT Head");
+```
+
+## Control Flow
+
+```csharp
+// If statements
+if (age >= 18)
+{
+    Console.WriteLine("Adult");
+}
+else if (age >= 13)
+{
+    Console.WriteLine("Teenager");
+}
+else
+{
+    Console.WriteLine("Child");
+}
+
+// Ternary operator
+string status = age >= 18 ? "Adult" : "Minor";
+
+// Switch statement (traditional)
+switch (dayOfWeek)
+{
+    case "Monday":
+        Console.WriteLine("Start of work week");
+        break;
+    case "Friday":
+        Console.WriteLine("TGIF!");
+        break;
+    default:
+        Console.WriteLine("Regular day");
+        break;
+}
+
+// Switch expression (modern C# - more concise)
+string dayMessage = dayOfWeek switch
+{
+    "Monday" => "Start of work week",
+    "Friday" => "TGIF!",
+    _ => "Regular day"  // _ is default case
+};
+```
+
+## Loops
+
+```csharp
+// For loop
+for (int i = 0; i < 5; i++)
+{
+    Console.WriteLine($"Iteration: {i}");
+}
+
+// Foreach loop (like Python's for...in)
+string[] items = {"CT", "MRI", "X-Ray"};
+foreach (string item in items)
+{
+    Console.WriteLine(item);
+}
+
+// While loop
+int counter = 0;
+while (counter < 3)
+{
+    Console.WriteLine($"Count: {counter}");
+    counter++;
+}
+
+// Dictionary iteration
+foreach (var kvp in examCodes)  // kvp = key-value pair
+{
+    Console.WriteLine($"{kvp.Key}: {kvp.Value}");
+}
+```
+
+## Methods/Functions
+
+```csharp
+// Basic method structure
+static returnType MethodName(parameters)
+{
+    // method body
+    return value;  // if not void
+}
+
+// Examples
+static string GenerateReport(string name, int age)
+{
+    return $"Patient: {name}, Age: {age}";
+}
+
+static void PrintMessage(string message)  // void = no return value
+{
+    Console.WriteLine(message);
+}
+
+// Method with default parameter
+static string ScheduleExam(string patient, string exam, string time = "09:00 AM")
+{
+    return $"{patient} scheduled for {exam} at {time}";
+}
+
+// Method overloading (same name, different parameters)
+static double Calculate(double a, double b)
+{
+    return a + b;
+}
+
+static int Calculate(int a, int b, int c)
+{
+    return a + b + c;
+}
+```
+
+## Null Safety & Handling
+
+```csharp
+// Null checking
+if (patientAge.HasValue)  // for nullable types
+{
+    Console.WriteLine($"Age: {patientAge.Value}");
+}
+
+if (diagnosis != null)    // for reference types
+{
+    Console.WriteLine($"Diagnosis: {diagnosis}");
+}
+
+// Null coalescing operator (??) - provide default if null
+string finalDiagnosis = diagnosis ?? "Pending review";
+
+// Null conditional operator (?.) - safe navigation
+int? length = patientName?.Length;  // null if patientName is null
+
+// Pattern matching with null
+string GetStatus(int? age) => age switch
+{
+    null => "Age unknown",
+    < 18 => "Pediatric",
+    >= 65 => "Geriatric",
+    _ => "Adult"
+};
+```
+
+## Common Operators
+
+```csharp
+// Arithmetic
+int sum = a + b;
+int difference = a - b;
+int product = a * b;
+int quotient = a / b;
+int remainder = a % b;
+
+// Increment/Decrement
+counter++;        // post-increment
+++counter;        // pre-increment
+counter--;        // post-decrement
+--counter;        // pre-decrement
+
+// Comparison
+bool equal = (a == b);
+bool notEqual = (a != b);
+bool greater = (a > b);
+bool greaterOrEqual = (a >= b);
+
+// Logical
+bool and = (condition1 && condition2);
+bool or = (condition1 || condition2);
+bool not = !condition;
+
+// Assignment
+int x = 5;
+x += 3;          // x = x + 3
+x -= 2;          // x = x - 2
+x *= 4;          // x = x * 4
+x /= 2;          // x = x / 2
+```
+
+## Input/Output
+
+```csharp
+// Output
+Console.WriteLine("Hello World");        // with newline
+Console.Write("No newline");             // without newline
+
+// Input
+Console.WriteLine("Enter your name:");
+string? userInput = Console.ReadLine();  // returns nullable string
+
+// Convert string input to numbers
+string? ageInput = Console.ReadLine();
+if (int.TryParse(ageInput, out int age))
+{
+    Console.WriteLine($"Age: {age}");
+}
+else
+{
+    Console.WriteLine("Invalid age entered");
+}
+```
+
+## Key Differences from Python/Dart
+
+| Concept | Python | Dart | C# |
+|---------|--------|------|-----|
+| Variable declaration | `name = "John"` | `String name = "John"` or `var name = "John"` | `string name = "John"` or `var name = "John"` |
+| String interpolation | `f"Hello {name}"` | `"Hello $name"` | `$"Hello {name}"` |
+| Lists/Arrays | `items = [1, 2, 3]` | `List<int> items = [1, 2, 3]` | `List<int> items = new List<int> {1, 2, 3}` |
+| Dictionary | `data = {"key": "value"}` | `Map<String, String> data = {"key": "value"}` | `Dictionary<string, string> data = new() {"key", "value"}` |
+| Method definition | `def method(param):` | `String method(String param) { }` | `static string Method(string param) { }` |
+| Null safety | `if value is not None:` | `if (value != null)` | `if (value != null)` or `if (value.HasValue)` |
+
+## Quick Reference Commands
+
+```bash
+# Create new console project
+dotnet new console -n ProjectName
+
+# Run the project
+dotnet run
+
+# Build the project
+dotnet build
+
+# Add NuGet package
+dotnet add package PackageName
+```
+
+This cheatsheet covers the essential syntax you'll use daily in C# development. Keep it handy as you continue learning and building more complex applications!

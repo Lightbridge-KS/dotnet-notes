@@ -12,6 +12,9 @@ book:
     - part: Intro
       chapters: 
         - "content/ecosystem/dotnet-eco.qmd"
+    - part: C# Lang
+      chapters: 
+        - "content/basic/syntax-basic-cheatsheet.qmd"
 
 format:
   html:
