@@ -1,0 +1,4 @@
+- source: project
+  netlify:
+    - id: 61539860-1b33-4a5a-977f-296541b82933
+      url: https://dotnet-notes-lightbridge.netlify.app
