@@ -1,0 +1,25 @@
+project:
+  type: book
+
+book:
+  title: "Dotnet Notes"
+  author: "Kittipos Sirivongrungson"
+  date: today
+  repo-url: https://github.com/Lightbridge-KS/dotnet-notes
+  site-url: https://dotnet-notes-lightbridge.netlify.app
+  chapters:
+    - index.qmd
+    - part: Intro
+      chapters: 
+        - "content/ecosystem/dotnet-eco.qmd"
+
+format:
+  html:
+    theme:
+      light:
+      - cosmo
+      dark: 
+      - darkly
+    toc-depth: 4
+
+freeze: auto
