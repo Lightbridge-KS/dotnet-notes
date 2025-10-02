@@ -15,6 +15,9 @@ book:
     - part: C# Lang
       chapters: 
         - "content/basic/syntax-basic-cheatsheet.qmd"
+    - part: CLI
+      chapters: 
+        - "content/basic/cs_cli-args.qmd"
 
 format:
   html:

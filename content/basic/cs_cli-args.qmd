@@ -1,0 +1,176 @@
+# CLI Args
+
+::: {.callout-note appearance="default" collapse="false"}
+**Q:** About the `Main(string[] args)`, what is the `string[] args` ? Please explain.
+:::
+
+
+Great question! Let me explain `string[] args`:
+
+## What is `string[] args`?
+
+`string[] args` is an **array of command-line arguments** passed to your program when it starts.
+
+```
+Program Execution Flow
+──────────────────────
+
+Terminal/Command Line
+       ↓
+$ dotnet run arg1 arg2 arg3
+       ↓
+Operating System
+       ↓
+C# Runtime starts your program
+       ↓
+Main(string[] args)
+  args[0] = "arg1"
+  args[1] = "arg2"
+  args[2] = "arg3"
+```
+
+## Simple Example
+
+```csharp
+using System;
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        Console.WriteLine($"Number of arguments: {args.Length}");
+        
+        for (int i = 0; i < args.Length; i++)
+        {
+            Console.WriteLine($"Argument {i}: {args[i]}");
+        }
+    }
+}
+```
+
+**Running this:**
+```bash
+$ dotnet run hello world 123
+
+# Output:
+# Number of arguments: 3
+# Argument 0: hello
+# Argument 1: world
+# Argument 2: 123
+```
+
+## Practical Example: REST API with Arguments
+
+```csharp
+using System;
+using System.Net.Http;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main(string[] args)
+    {
+        // Check if user provided a post ID
+        if (args.Length == 0)
+        {
+            Console.WriteLine("Usage: dotnet run <post-id>");
+            Console.WriteLine("Example: dotnet run 5");
+            return;
+        }
+        
+        // Get the post ID from arguments
+        string postId = args[0];
+        
+        using (HttpClient client = new HttpClient())
+        {
+            try
+            {
+                string url = $"https://jsonplaceholder.typicode.com/posts/{postId}";
+                string response = await client.GetStringAsync(url);
+                
+                Console.WriteLine($"Post {postId}:");
+                Console.WriteLine(response);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error: {e.Message}");
+            }
+        }
+    }
+}
+```
+
+**Running this:**
+
+```bash
+$ dotnet run 5      # Fetches post with ID 5
+$ dotnet run 10     # Fetches post with ID 10
+$ dotnet run        # Shows usage message
+```
+
+## Comparison with Other Languages
+
+```
+Language              Command-Line Arguments
+────────────────────────────────────────────────────
+Python                sys.argv (list)
+                      def main():
+                          args = sys.argv[1:]
+
+Dart                  List<String> args
+                      void main(List<String> args)
+
+JavaScript (Node)     process.argv (array)
+                      // process.argv[2] is first arg
+
+C#                    string[] args
+                      static void Main(string[] args)
+```
+
+## Important Notes
+
+1. **`args[0]` is the first argument**, NOT the program name (unlike Python's `sys.argv[0]`)
+   
+2. **All arguments are strings** - you need to convert them if you want numbers:
+   ```csharp
+   int number = int.Parse(args[0]);        // May throw exception
+   int number = Convert.ToInt32(args[0]);  // May throw exception
+   
+   // Safer way:
+   if (int.TryParse(args[0], out int number))
+   {
+       Console.WriteLine($"Number: {number}");
+   }
+   else
+   {
+       Console.WriteLine("Not a valid number");
+   }
+   ```
+
+3. **You can omit it** if you don't need arguments:
+   ```csharp
+   static void Main()  // Valid!
+   {
+       Console.WriteLine("No args needed");
+   }
+   ```
+
+## Passing Arguments in VS Code
+
+If you're using VS Code, you can configure arguments in `launch.json`:
+
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": ".NET Core Launch",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/Debug/net8.0/YourApp.dll",
+            "args": ["arg1", "arg2", "arg3"],  // <-- Arguments here
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
+```
