@@ -15,8 +15,12 @@ book:
     - part: C# Lang
       chapters: 
         - "content/basic/syntax-basic-cheatsheet.qmd"
+        - "content/basic/cs_datatypes.qmd"
         - "content/orgs/cs_code-organization.qmd"
         - "content/orgs/cs_program.qmd"
+    - part: OOP
+      chapters: 
+        - "content/oop/cs_type-inferred-object-creation.qmd"
     - part: CLI
       chapters: 
         - "content/basic/cs_cli-args.qmd"

@@ -1,0 +1,106 @@
+# Target-typed new expression
+
+
+Great question! The `new()` is a **target-typed new expression** introduced in C# 9.0.
+
+## What `new()` Does
+
+It's a shorthand that lets the compiler **infer the type** from the context. Since the property is declared as `List<string>`, the compiler knows you want `new List<string>()`.
+
+```csharp
+// These are EXACTLY equivalent:
+public List<string> Diagnoses { get; set; } = new List<string>();
+public List<string> Diagnoses { get; set; } = new();  // Shorter!
+```
+
+## The Evolution of C# Initialization
+
+```csharp
+// C# 1.0 - Verbose
+List<string> names = new List<string>();
+
+// C# 3.0 - With var (type inference on left side)
+var names = new List<string>();
+
+// C# 9.0 - With new() (type inference on right side)
+List<string> names = new();
+
+// C# 12.0 - Collection expression (newest!)
+List<string> names = [];  // Even shorter!
+```
+
+## Visual Comparison
+
+```
+Type Declaration Flow:
+┌─────────────────────────────────────────────────────┐
+│ List<string> names = new List<string>();           │
+│  ↑                       ↑                          │
+│  └─ Type declared here   └─ Type repeated here     │
+│                                                     │
+│ List<string> names = new();                        │
+│  ↑                   ↑                              │
+│  └─ Type declared    └─ Compiler infers from left  │
+└─────────────────────────────────────────────────────┘
+```
+
+## When to Use Each Style
+
+```csharp
+// ✅ Use new() when type is obvious from context
+public List<string> Diagnoses { get; set; } = new();
+Dictionary<string, int> ages = new();
+
+// ✅ Use full type when it adds clarity
+var connection = new SqlConnection(connectionString);
+// (better than: SqlConnection connection = new();)
+
+// ✅ Use collection expression [] in C# 12+ (cleanest!)
+List<string> cities = ["Bangkok", "Tokyo"];
+```
+
+## Real-World Example
+
+```csharp
+class MedicalReport
+{
+    // Property initialization with new()
+    public List<string> Findings { get; set; } = new();
+    public Dictionary<string, double> Measurements { get; set; } = new();
+    public HashSet<string> Tags { get; set; } = new();
+    
+    // These are equivalent to:
+    // public List<string> Findings { get; set; } = new List<string>();
+    // public Dictionary<string, double> Measurements { get; set; } = new Dictionary<string, double>();
+    // public HashSet<string> Tags { get; set; } = new HashSet<string>();
+}
+
+// Usage
+var report = new MedicalReport();  // ← Also using new() here!
+// Or in older style: var report = new MedicalReport();
+
+report.Findings.Add("Normal chest X-ray");
+report.Measurements["Heart Rate"] = 72.0;
+```
+
+## Dart Comparison
+
+In Dart, you'd do something similar:
+
+```dart
+class PatientRecord {
+  List<String> diagnoses = [];  // Dart's concise initialization
+  Map<String, double> labResults = {};
+}
+```
+
+C#'s `new()` is trying to be similarly concise while maintaining type safety.
+
+## Summary
+
+- `new()` = **type-inferred object creation**
+- The compiler figures out the type from the left side
+- It's just **syntactic sugar** to reduce repetition
+- Your .NET 9 supports this and even newer syntax like `[]`
+
+Does this clarify it? Would you like to see more about C#'s modern syntax features?

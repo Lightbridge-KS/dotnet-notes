@@ -1,0 +1,361 @@
+# C# Data Types
+
+Let me guide you through C# data types and structures, highlighting similarities and differences with Dart.
+
+
+## Part 1: Value Types vs Reference Types
+
+C# has a fundamental distinction that's more explicit than in Dart:
+
+```
+Memory Layout:
+┌─────────────────────────────────────────┐
+│           STACK                         │
+│  ┌──────────────┐                       │
+│  │ int x = 5    │  (Value Type)         │
+│  │ Value: 5     │                       │
+│  └──────────────┘                       │
+│                                         │
+│  ┌──────────────┐                       │
+│  │ string name  │  (Reference Type)     │
+│  │ Ref: 0x1A2B  │────────┐              │
+│  └──────────────┘        │              │
+└─────────────────────────│──────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────┐
+│           HEAP                          │
+│     ┌─────────────────────┐             │
+│     │ "Hello World"       │ (0x1A2B)    │
+│     └─────────────────────┘             │
+└─────────────────────────────────────────┘
+```
+
+---
+
+## Part 2: Primitive Data Types
+
+### Numeric Types
+
+```csharp
+// Integers (similar to Dart's int)
+sbyte age = 35;        // 8-bit signed (-128 to 127)
+byte pixels = 255;     // 8-bit unsigned (0 to 255)
+short temp = -32000;   // 16-bit signed
+ushort count = 60000;  // 16-bit unsigned
+int population = 1000000;      // 32-bit signed (most common)
+uint distance = 4000000000;    // 32-bit unsigned
+long bigNumber = 9223372036854775807L;  // 64-bit signed
+ulong hugeNumber = 18446744073709551615UL; // 64-bit unsigned
+
+// Floating-point (similar to Dart's double)
+float price = 19.99f;      // 32-bit (7 digits precision)
+double precise = 3.14159265359;  // 64-bit (15-17 digits) - DEFAULT
+decimal money = 99.99m;    // 128-bit (28-29 digits) - for financial calculations
+
+// Boolean (exactly like Dart)
+bool isActive = true;
+
+// Character (similar to Dart)
+char grade = 'A';      // Single Unicode character
+
+// String (reference type, like Dart)
+string message = "Hello, C#!";
+```
+
+**Key Difference from Dart**: C# has explicit numeric type sizes. Dart just has `int` and `double`.
+
+### Type Inference with `var`
+
+```csharp
+var name = "Kittipos";     // Compiler infers string
+var age = 35;              // Compiler infers int
+var salary = 50000.0;      // Compiler infers double
+var isCoding = true;       // Compiler infers bool
+
+// This is similar to Dart's 'var' or 'final'
+```
+
+---
+
+## Part 3: Collections (Data Structures)
+
+### Arrays (Fixed Size)
+
+```csharp
+// Declaration and initialization
+int[] scores = new int[5];           // Array of 5 integers
+string[] names = { "Alice", "Bob", "Charlie" };
+int[] numbers = new int[] { 1, 2, 3, 4, 5 };
+
+// Multi-dimensional arrays
+int[,] matrix = new int[3, 3];       // 2D array
+int[,] grid = { 
+    { 1, 2, 3 }, 
+    { 4, 5, 6 } 
+};
+
+// Accessing elements
+Console.WriteLine(names[0]);         // "Alice"
+matrix[0, 0] = 10;
+```
+
+```
+Array Memory Layout:
+┌─────────────────────────────────┐
+│ int[] arr = {10, 20, 30, 40}    │
+├─────┬─────┬─────┬─────┬─────────┤
+│  0  │  1  │  2  │  3  │         │
+│ 10  │ 20  │ 30  │ 40  │         │
+└─────┴─────┴─────┴─────┴─────────┘
+```
+
+**Similar to Dart**: `List<int> scores = [1, 2, 3];`
+
+### List<T> (Dynamic Size - Most Common)
+
+```csharp
+using System.Collections.Generic;
+
+// Like Dart's List
+List<string> patients = new List<string>();
+patients.Add("John");
+patients.Add("Jane");
+patients.AddRange(new[] { "Bob", "Alice" });
+
+// With initialization
+List<int> ages = new List<int> { 25, 30, 35, 40 };
+
+// Common operations
+patients.Remove("Bob");              // Remove specific item
+patients.RemoveAt(0);               // Remove by index
+int count = patients.Count;         // Get count
+bool hasJane = patients.Contains("Jane");
+
+// Collection initializer (C# 12+, similar style)
+List<string> cities = ["Bangkok", "Chiang Mai", "Phuket"];
+```
+
+**Dart equivalent**: `List<String> patients = ['John', 'Jane'];`
+
+### Dictionary<TKey, TValue> (Hash Map)
+
+```csharp
+// Like Dart's Map
+Dictionary<string, int> ages = new Dictionary<string, int>();
+ages["Alice"] = 30;
+ages["Bob"] = 35;
+ages.Add("Charlie", 40);
+
+// With initialization
+Dictionary<string, string> capitals = new Dictionary<string, string>
+{
+    { "Thailand", "Bangkok" },
+    { "Japan", "Tokyo" },
+    { "USA", "Washington DC" }
+};
+
+// Shorter syntax (C# 12+)
+Dictionary<string, int> scores = new()
+{
+    ["Math"] = 95,
+    ["Science"] = 88
+};
+
+// Access and check
+int aliceAge = ages["Alice"];
+if (ages.ContainsKey("Bob"))
+{
+    Console.WriteLine(ages["Bob"]);
+}
+
+// Safe access
+if (ages.TryGetValue("Unknown", out int value))
+{
+    Console.WriteLine(value);
+}
+```
+
+```
+Dictionary Structure:
+┌──────────┬──────────┐
+│   Key    │  Value   │
+├──────────┼──────────┤
+│ "Alice"  │    30    │
+│ "Bob"    │    35    │
+│ "Charlie"│    40    │
+└──────────┴──────────┘
+```
+
+**Dart equivalent**: `Map<String, int> ages = {'Alice': 30, 'Bob': 35};`
+
+### HashSet<T> (Unique Items)
+
+```csharp
+// Like Dart's Set
+HashSet<string> uniqueIds = new HashSet<string>();
+uniqueIds.Add("ID001");
+uniqueIds.Add("ID002");
+uniqueIds.Add("ID001");  // Won't be added (duplicate)
+
+// Set operations
+HashSet<int> setA = new HashSet<int> { 1, 2, 3, 4 };
+HashSet<int> setB = new HashSet<int> { 3, 4, 5, 6 };
+
+setA.UnionWith(setB);        // Union: {1,2,3,4,5,6}
+setA.IntersectWith(setB);    // Intersection: {3,4}
+setA.ExceptWith(setB);       // Difference: {1,2}
+```
+
+**Dart equivalent**: `Set<String> ids = {'ID001', 'ID002'};`
+
+### Queue<T> and Stack<T>
+
+```csharp
+// Queue (FIFO - First In First Out)
+Queue<string> patients = new Queue<string>();
+patients.Enqueue("Patient A");
+patients.Enqueue("Patient B");
+string next = patients.Dequeue();  // Gets "Patient A"
+
+// Stack (LIFO - Last In First Out)
+Stack<string> history = new Stack<string>();
+history.Push("Page 1");
+history.Push("Page 2");
+string last = history.Pop();  // Gets "Page 2"
+```
+
+```
+Queue (FIFO):          Stack (LIFO):
+┌───┬───┬───┐          ┌───┐
+│ A │ B │ C │          │ C │ ← Top (Pop here)
+└───┴───┴───┘          ├───┤
+ ↑       ↑             │ B │
+ │       │             ├───┤
+Dequeue Enqueue        │ A │
+                       └───┘
+```
+
+---
+
+## Part 4: Nullable Types
+
+C# has explicit nullable types (similar to Dart's null safety):
+
+```csharp
+// Non-nullable (default in C# 8.0+ with nullable context enabled)
+int age = 30;           // Cannot be null
+string name = "Bob";    // Cannot be null
+
+// Nullable value types
+int? maybeAge = null;   // Can be null
+double? temperature = 36.5;
+
+// Nullable reference types (C# 8.0+)
+string? middleName = null;  // Explicitly nullable
+
+// Checking and using nullable
+if (maybeAge.HasValue)
+{
+    Console.WriteLine(maybeAge.Value);
+}
+
+// Null-coalescing operator
+int actualAge = maybeAge ?? 0;  // Use 0 if null
+
+// Null-conditional operator
+string? upperName = middleName?.ToUpper();  // Returns null if middleName is null
+```
+
+**Very similar to Dart's** `int? age;` **and** `age ?? 0`
+
+---
+
+## Part 5: Tuples (Lightweight Data Grouping)
+
+```csharp
+// Tuple (similar to Dart records)
+(string name, int age) person = ("Alice", 30);
+Console.WriteLine(person.name);
+Console.WriteLine(person.age);
+
+// Returning tuple from method
+(double mean, double median) GetStats(List<double> data)
+{
+    // calculations...
+    return (calculatedMean, calculatedMedian);
+}
+
+// Deconstruction
+var (mean, median) = GetStats(myData);
+
+// Without names (less readable)
+var tuple = ("Bob", 35);
+Console.WriteLine(tuple.Item1);  // "Bob"
+```
+
+**Similar to Dart**: `({String name, int age}) person = (name: 'Alice', age: 30);`
+
+---
+
+## Part 6: Quick Reference Table
+
+| C# Type | Dart Equivalent | Size | Usage |
+|---------|----------------|------|-------|
+| `int` | `int` | 32-bit | General integers |
+| `long` | `int` | 64-bit | Very large integers |
+| `double` | `double` | 64-bit | Decimal numbers |
+| `decimal` | - | 128-bit | Financial calculations |
+| `bool` | `bool` | 1-bit | True/False |
+| `string` | `String` | Variable | Text |
+| `List<T>` | `List<T>` | Dynamic | Ordered collection |
+| `Dictionary<K,V>` | `Map<K,V>` | Dynamic | Key-value pairs |
+| `HashSet<T>` | `Set<T>` | Dynamic | Unique items |
+| `int?` | `int?` | Nullable | Can be null |
+
+---
+
+## Quick Practice Exercise
+
+Let's create a simple medical records example:
+
+```csharp
+using System;
+using System.Collections.Generic;
+
+// Patient record structure
+class PatientRecord
+{
+    public string PatientId { get; set; }
+    public string Name { get; set; }
+    public int Age { get; set; }
+    public List<string> Diagnoses { get; set; } = new();
+    public Dictionary<string, double> LabResults { get; set; } = new();
+}
+
+// Usage
+var patient = new PatientRecord
+{
+    PatientId = "PT001",
+    Name = "Somchai",
+    Age = 45
+};
+
+patient.Diagnoses.Add("Hypertension");
+patient.LabResults["Glucose"] = 105.5;
+patient.LabResults["Cholesterol"] = 200.0;
+
+Console.WriteLine($"{patient.Name}, Age: {patient.Age}");
+```
+
+---
+
+## Next Steps
+
+Would you like me to:
+1. **Dive deeper** into any specific data structure?
+2. **Show LINQ** (Language Integrated Query) for working with collections?
+3. **Explain generics** and custom data structures?
+4. **Compare** more patterns between C# and Dart?
+
+What area interests you most?
