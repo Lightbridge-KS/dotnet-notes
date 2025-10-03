@@ -1,0 +1,359 @@
+# record
+
+`record` is one of C#'s most useful modern features (introduced in C# 9.0). Let me explain it thoroughly.
+
+## What is a Record?
+
+A **record** is a special type designed for **immutable data models**. It's perfect for DTOs (Data Transfer Objects), value objects, and any data you want to treat as immutable.
+
+```csharp
+// Simple record - one line!
+public record Person(string Name, int Age);
+
+// That's equivalent to writing all this class code:
+public class PersonClass
+{
+    public string Name { get; init; }
+    public int Age { get; init; }
+    
+    public PersonClass(string name, int age)
+    {
+        Name = name;
+        Age = age;
+    }
+    
+    // Plus: equality, GetHashCode, ToString, Deconstruct...
+}
+```
+
+## Record vs Class - Key Differences
+
+```
+Conceptual Difference:
+┌────────────────────────────────────────────┐
+│ CLASS (Reference Equality)                 │
+│  ┌─────┐         ┌─────┐                   │
+│  │ Obj │  ≠≠≠≠   │ Obj │  Different refs   │
+│  └─────┘         └─────┘                   │
+└────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────┐
+│ RECORD (Value Equality)                    │
+│  ┌─────┐         ┌─────┐                   │
+│  │Data │  ====   │Data │  Same values!     │
+│  └─────┘         └─────┘                   │
+└────────────────────────────────────────────┘
+```
+
+## Basic Record Examples
+
+```csharp
+// Positional record (most concise)
+public record Patient(string Id, string Name, int Age);
+
+// Usage
+var patient1 = new Patient("PT001", "Somchai", 45);
+var patient2 = new Patient("PT001", "Somchai", 45);
+
+// Value-based equality (KEY FEATURE!)
+Console.WriteLine(patient1 == patient2);  // TRUE! (same values)
+
+// Compare with class:
+public class PatientClass
+{
+    public string Id { get; set; }
+    public string Name { get; set; }
+    public int Age { get; set; }
+}
+
+var p1 = new PatientClass { Id = "PT001", Name = "Somchai", Age = 45 };
+var p2 = new PatientClass { Id = "PT001", Name = "Somchai", Age = 45 };
+Console.WriteLine(p1 == p2);  // FALSE! (different references)
+```
+
+## Record Features
+
+### 1. Immutability with `with` Expression
+
+```csharp
+public record Patient(string Id, string Name, int Age);
+
+var original = new Patient("PT001", "Somchai", 45);
+
+// Create a copy with one property changed
+var updated = original with { Age = 46 };
+
+Console.WriteLine(original.Age);  // 45 (unchanged!)
+Console.WriteLine(updated.Age);   // 46
+Console.WriteLine(updated.Id);    // "PT001" (copied)
+```
+
+```
+'with' Expression:
+Original Record          New Record (Modified Copy)
+┌──────────────┐         ┌──────────────┐
+│ Id: "PT001"  │         │ Id: "PT001"  │
+│ Name:"Somchai"│  with   │ Name:"Somchai"│
+│ Age: 45      │  ───→   │ Age: 46      │ ← Changed
+└──────────────┘         └──────────────┘
+```
+
+### 2. Deconstruction
+
+```csharp
+public record Patient(string Id, string Name, int Age);
+
+var patient = new Patient("PT001", "Somchai", 45);
+
+// Deconstruct into variables
+var (id, name, age) = patient;
+
+Console.WriteLine(id);    // "PT001"
+Console.WriteLine(name);  // "Somchai"
+Console.WriteLine(age);   // 45
+```
+
+### 3. Automatic ToString()
+
+```csharp
+public record Patient(string Id, string Name, int Age);
+
+var patient = new Patient("PT001", "Somchai", 45);
+
+Console.WriteLine(patient);
+// Output: Patient { Id = PT001, Name = Somchai, Age = 45 }
+
+// Compare with class (less useful):
+// Output: PatientClass
+```
+
+### 4. Value-Based Equality
+
+```csharp
+var p1 = new Patient("PT001", "Somchai", 45);
+var p2 = new Patient("PT001", "Somchai", 45);
+var p3 = new Patient("PT002", "Somsri", 35);
+
+Console.WriteLine(p1 == p2);      // TRUE (same values)
+Console.WriteLine(p1.Equals(p2)); // TRUE
+Console.WriteLine(p1 == p3);      // FALSE (different values)
+```
+
+## Record Styles
+
+### Positional Record (Immutable by default)
+
+```csharp
+// Properties are init-only (can't be changed after creation)
+public record Patient(string Id, string Name, int Age);
+
+var patient = new Patient("PT001", "Somchai", 45);
+// patient.Age = 46;  // ❌ Compile error! init-only property
+```
+
+### Record with Body
+
+```csharp
+public record Patient(string Id, string Name, int Age)
+{
+    // Add computed properties
+    public bool IsSenior => Age >= 60;
+    
+    // Add methods
+    public string GetDisplayName() => $"{Name} ({Id})";
+    
+    // Add validation
+    public Patient 
+    {
+        if (Age < 0) throw new ArgumentException("Age cannot be negative");
+    }
+}
+```
+
+### Record with Mutable Properties
+
+```csharp
+// Standard property syntax (can be mutable)
+public record Patient
+{
+    public string Id { get; set; }      // Mutable
+    public string Name { get; init; }   // Immutable after init
+    public int Age { get; init; }       // Immutable after init
+}
+
+var patient = new Patient 
+{ 
+    Id = "PT001", 
+    Name = "Somchai", 
+    Age = 45 
+};
+
+patient.Id = "PT002";  // ✅ Allowed (mutable)
+// patient.Age = 46;   // ❌ Error (init-only)
+```
+
+## Medical Record Example
+
+```csharp
+// Immutable patient data
+public record PatientInfo(
+    string PatientId,
+    string Name,
+    DateTime DateOfBirth,
+    string BloodType
+)
+{
+    public int Age => DateTime.Now.Year - DateOfBirth.Year;
+}
+
+// Lab result record
+public record LabResult(
+    string TestName,
+    double Value,
+    string Unit,
+    DateTime TestDate
+);
+
+// Imaging study record
+public record ImagingStudy(
+    string StudyId,
+    string Modality,
+    DateTime StudyDate,
+    string[] Findings
+);
+
+// Usage
+var patient = new PatientInfo(
+    "PT12345",
+    "สมชาย ใจดี",
+    new DateTime(1978, 5, 15),
+    "O+"
+);
+
+var labResult = new LabResult(
+    "Hemoglobin",
+    14.5,
+    "g/dL",
+    DateTime.Now
+);
+
+// Create collection of results
+List<LabResult> results = 
+[
+    new("Glucose", 105.5, "mg/dL", DateTime.Now),
+    new("Cholesterol", 200.0, "mg/dL", DateTime.Now),
+    new("HDL", 55.0, "mg/dL", DateTime.Now)
+];
+
+// Immutable update
+var updatedPatient = patient with { Name = "สมชาย ใจดี (แก้ไข)" };
+```
+
+## Record vs Class - When to Use What?
+
+```csharp
+// ✅ Use RECORD for:
+public record PatientDTO(string Id, string Name, int Age);
+public record LabResult(string Test, double Value);
+public record Address(string Street, string City, string ZipCode);
+public record ApiResponse(bool Success, string Message, object? Data);
+
+// Data that should be compared by value
+// DTOs and data transfer
+// Immutable data models
+// Value objects
+
+// ✅ Use CLASS for:
+public class PatientService { }
+public class DatabaseConnection { }
+public class ImageProcessor { }
+public class RadiologyWorkflow { }
+
+// Objects with behavior/methods
+// Mutable entities
+// Objects with identity
+// Domain models with complex behavior
+```
+
+## Comparison Table
+
+| Feature | Record | Class |
+|---------|--------|-------|
+| Equality | Value-based | Reference-based |
+| Default mutability | Immutable | Mutable |
+| `with` expression | ✅ Yes | ❌ No |
+| Inheritance | ✅ Yes | ✅ Yes |
+| ToString() | Auto-generated | Default (type name) |
+| Deconstruction | ✅ Built-in | Manual only |
+| Use case | Data/DTOs | Behavior/entities |
+
+## Dart Comparison
+
+Dart doesn't have records in the same way, but has similar concepts:
+
+```dart
+// Dart's closest equivalent (as of Dart 3.0)
+// Records (similar to C# tuples/records)
+({String name, int age}) person = (name: 'Alice', age: 30);
+
+// Or using classes with final fields
+class Patient {
+  final String id;
+  final String name;
+  final int age;
+  
+  const Patient(this.id, this.name, this.age);
+  
+  // Need to manually implement equality
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Patient &&
+          id == other.id &&
+          name == other.name &&
+          age == other.age;
+}
+```
+
+C# records give you all this functionality automatically!
+
+## Advanced: Record Inheritance
+
+```csharp
+// Base record
+public record Person(string Name, int Age);
+
+// Derived record (adds properties)
+public record Patient(string Name, int Age, string PatientId) 
+    : Person(Name, Age);
+
+// Another derived record
+public record Doctor(string Name, int Age, string LicenseNumber) 
+    : Person(Name, Age);
+
+var patient = new Patient("Somchai", 45, "PT001");
+var doctor = new Doctor("Dr. Smith", 50, "LIC12345");
+
+// Both are Persons
+Person p1 = patient;
+Person p2 = doctor;
+```
+
+## Summary
+
+**Records are perfect for:**
+- 📦 Data containers (DTOs, API responses)
+- 🔒 Immutable data models
+- ⚖️ Value-based equality
+- 🎯 Simple data structures
+
+**Key Benefits:**
+- Less boilerplate code
+- Immutability by default (safer)
+- Value equality out of the box
+- Clean syntax with `with` expressions
+
+Would you like to see:
+1. **More examples** with medical/radiology data?
+2. **Record patterns** in pattern matching?
+3. **How to use records with APIs**?
