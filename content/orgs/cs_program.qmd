@@ -1,0 +1,374 @@
+# `Program.cs`
+
+Let's demystify `Program.cs` and show you how to organize your C# code properly.
+
+## What is `Program.cs`?
+
+`Program.cs` is the **entry point** of your C# application—it's where execution begins. Think of it like `if __name__ == "__main__":` in Python or `void main()` in Dart. When you run your application, the .NET runtime looks for `Program.cs` and starts executing from there.
+
+### Modern vs. Traditional Program.cs
+
+C# has evolved significantly. Let me show you both styles:
+
+**Modern Style (C# 10+, "Top-level statements"):**
+```csharp
+// Program.cs - Modern style
+using RadiologyApp.Core.Imaging;
+using RadiologyApp.Core.Models;
+
+Console.WriteLine("Starting Radiology Application...");
+
+var processor = new DicomProcessor();
+var result = processor.ProcessStudy("study_001");
+
+Console.WriteLine($"Processed: {result.PatientName}");
+```
+
+**Traditional Style (Pre-C# 10):**
+```csharp
+// Program.cs - Traditional style
+using System;
+using RadiologyApp.Core.Imaging;
+using RadiologyApp.Core.Models;
+
+namespace RadiologyApp
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            Console.WriteLine("Starting Radiology Application...");
+            
+            var processor = new DicomProcessor();
+            var result = processor.ProcessStudy("study_001");
+            
+            Console.WriteLine($"Processed: {result.PatientName}");
+        }
+    }
+}
+```
+
+The modern style is just syntactic sugar—behind the scenes, the compiler generates the traditional structure. Both do exactly the same thing. New projects default to the modern style, but you'll see both in real-world code.
+
+## Keeping Program.cs Clean
+
+The golden rule: **`Program.cs` should only orchestrate, not implement.** Think of it as the conductor of an orchestra—it coordinates, but doesn't play all the instruments.
+
+Here's how to structure a real project:
+
+```
+RadiologyApp/
+├── Program.cs                    (Entry point - orchestration only)
+├── Models/
+│   ├── Patient.cs
+│   ├── Study.cs
+│   └── DicomImage.cs
+├── Services/
+│   ├── DicomProcessor.cs
+│   ├── ImageAnalyzer.cs
+│   └── ReportGenerator.cs
+└── Utils/
+    └── FileHelper.cs
+```
+
+### Example: A Radiology Image Processing Application
+
+**Program.cs** (Keep it minimal):
+```csharp
+using RadiologyApp.Services;
+using RadiologyApp.Utils;
+
+Console.WriteLine("=== Radiology Image Processor ===\n");
+
+// Get input directory
+var inputPath = args.Length > 0 ? args[0] : "./dicom_studies";
+
+// Create services
+var fileHelper = new FileHelper();
+var processor = new DicomProcessor();
+var analyzer = new ImageAnalyzer();
+var reportGenerator = new ReportGenerator();
+
+// Orchestrate the workflow
+try
+{
+    var dicomFiles = fileHelper.FindDicomFiles(inputPath);
+    Console.WriteLine($"Found {dicomFiles.Count} DICOM files");
+    
+    foreach (var file in dicomFiles)
+    {
+        var image = processor.LoadImage(file);
+        var analysis = analyzer.AnalyzeImage(image);
+        reportGenerator.AddToReport(analysis);
+    }
+    
+    reportGenerator.SaveReport("./output/report.json");
+    Console.WriteLine("\nProcessing complete!");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Error: {ex.Message}");
+}
+```
+
+**Models/Patient.cs:**
+```csharp
+namespace RadiologyApp.Models
+{
+    public class Patient
+    {
+        public string PatientId { get; set; }
+        public string Name { get; set; }
+        public DateTime DateOfBirth { get; set; }
+        public string Gender { get; set; }
+        
+        // Method in the model (like Dart's class methods)
+        public int GetAge()
+        {
+            var today = DateTime.Today;
+            var age = today.Year - DateOfBirth.Year;
+            if (DateOfBirth.Date > today.AddYears(-age)) age--;
+            return age;
+        }
+    }
+}
+```
+
+**Models/DicomImage.cs:**
+```csharp
+namespace RadiologyApp.Models
+{
+    public class DicomImage
+    {
+        public string FilePath { get; set; }
+        public Patient Patient { get; set; }
+        public string Modality { get; set; }  // CT, MR, CR, etc.
+        public DateTime StudyDate { get; set; }
+        public int[,] PixelData { get; set; }
+        public int Width { get; set; }
+        public int Height { get; set; }
+    }
+}
+```
+
+**Services/DicomProcessor.cs:**
+```csharp
+using RadiologyApp.Models;
+
+namespace RadiologyApp.Services
+{
+    public class DicomProcessor
+    {
+        private readonly string[] _supportedModalities = { "CT", "MR", "CR", "DX" };
+        
+        public DicomImage LoadImage(string filePath)
+        {
+            Console.WriteLine($"Loading: {Path.GetFileName(filePath)}");
+            
+            // In reality, you'd use a DICOM library like fo-dicom
+            // This is simplified for illustration
+            var image = new DicomImage
+            {
+                FilePath = filePath,
+                Patient = ExtractPatientInfo(filePath),
+                Modality = "CT",
+                StudyDate = DateTime.Now,
+                Width = 512,
+                Height = 512,
+                PixelData = LoadPixelData(filePath)
+            };
+            
+            ValidateModality(image.Modality);
+            return image;
+        }
+        
+        private Patient ExtractPatientInfo(string filePath)
+        {
+            // Extract from DICOM tags
+            return new Patient
+            {
+                PatientId = "PAT001",
+                Name = "John Doe",
+                DateOfBirth = new DateTime(1980, 5, 15),
+                Gender = "M"
+            };
+        }
+        
+        private int[,] LoadPixelData(string filePath)
+        {
+            // Load and return pixel data
+            // Simplified for example
+            return new int[512, 512];
+        }
+        
+        private void ValidateModality(string modality)
+        {
+            if (!_supportedModalities.Contains(modality))
+            {
+                throw new NotSupportedException(
+                    $"Modality '{modality}' is not supported");
+            }
+        }
+    }
+}
+```
+
+**Services/ImageAnalyzer.cs:**
+```csharp
+using RadiologyApp.Models;
+
+namespace RadiologyApp.Services
+{
+    public class ImageAnalyzer
+    {
+        public AnalysisResult AnalyzeImage(DicomImage image)
+        {
+            Console.WriteLine($"Analyzing image for patient: {image.Patient.Name}");
+            
+            var result = new AnalysisResult
+            {
+                PatientId = image.Patient.PatientId,
+                Modality = image.Modality,
+                AnalysisDate = DateTime.Now
+            };
+            
+            // Perform analysis
+            result.MeanIntensity = CalculateMeanIntensity(image.PixelData);
+            result.HasAbnormality = DetectAbnormality(image.PixelData);
+            
+            return result;
+        }
+        
+        private double CalculateMeanIntensity(int[,] pixelData)
+        {
+            // Calculate mean pixel intensity
+            long sum = 0;
+            int count = 0;
+            
+            for (int i = 0; i < pixelData.GetLength(0); i++)
+            {
+                for (int j = 0; j < pixelData.GetLength(1); j++)
+                {
+                    sum += pixelData[i, j];
+                    count++;
+                }
+            }
+            
+            return count > 0 ? (double)sum / count : 0;
+        }
+        
+        private bool DetectAbnormality(int[,] pixelData)
+        {
+            // Simplified AI detection logic
+            // In reality, you'd call your ML model here
+            return false;
+        }
+    }
+    
+    public class AnalysisResult
+    {
+        public string PatientId { get; set; }
+        public string Modality { get; set; }
+        public DateTime AnalysisDate { get; set; }
+        public double MeanIntensity { get; set; }
+        public bool HasAbnormality { get; set; }
+    }
+}
+```
+
+**Services/ReportGenerator.cs:**
+```csharp
+using System.Text.Json;
+using RadiologyApp.Services;
+
+namespace RadiologyApp.Services
+{
+    public class ReportGenerator
+    {
+        private readonly List<AnalysisResult> _results = new();
+        
+        public void AddToReport(AnalysisResult result)
+        {
+            _results.Add(result);
+        }
+        
+        public void SaveReport(string outputPath)
+        {
+            var directory = Path.GetDirectoryName(outputPath);
+            if (!Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+            
+            var json = JsonSerializer.Serialize(_results, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+            
+            File.WriteAllText(outputPath, json);
+            Console.WriteLine($"Report saved to: {outputPath}");
+        }
+    }
+}
+```
+
+**Utils/FileHelper.cs:**
+```csharp
+namespace RadiologyApp.Utils
+{
+    public class FileHelper
+    {
+        public List<string> FindDicomFiles(string directory)
+        {
+            if (!Directory.Exists(directory))
+            {
+                throw new DirectoryNotFoundException(
+                    $"Directory not found: {directory}");
+            }
+            
+            var dicomFiles = Directory
+                .GetFiles(directory, "*.dcm", SearchOption.AllDirectories)
+                .ToList();
+            
+            return dicomFiles;
+        }
+    }
+}
+```
+
+## Key Principles for Code Organization
+
+1. **One class per file**: Unlike Python where you might put multiple small classes in one module, C# convention is one public class per file, with the filename matching the class name.
+
+2. **Use folders for logical grouping**: 
+   - `Models/` for data structures
+   - `Services/` for business logic
+   - `Utils/` or `Helpers/` for utility functions
+   - `Controllers/` for web APIs
+   - `Repositories/` for data access
+
+3. **Keep Program.cs thin**: It should only:
+   - Set up configuration
+   - Create service instances
+   - Orchestrate the main workflow
+   - Handle top-level errors
+
+4. **Namespaces match folder structure**: If a file is in `Services/ImageAnalyzer.cs`, its namespace should be `YourApp.Services`.
+
+## Visual Structure Comparison
+
+Here's how it maps to what you know:
+
+```
+Python                          C#
+======                          ==
+
+my_package/                     MyApp/
+├── __init__.py                 ├── (no equivalent needed)
+├── __main__.py                 ├── Program.cs
+├── models.py                   ├── Models/
+│   ├── class Patient           │   ├── Patient.cs
+│   └── class Study             │   └── Study.cs
+└── services.py                 └── Services/
+    └── class Processor             └── Processor.cs
+```
