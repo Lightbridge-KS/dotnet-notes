@@ -1,0 +1,151 @@
+# C# Code Organization
+
+## The Organization Hierarchy in C#
+
+Think of C# code organization as a nested structure that goes from largest to smallest: **Solution → Project → Namespace → Class → Method**. Let me explain each level and how it compares to what you know.
+
+A **Solution** is the top-level container, similar to a workspace in VS Code. It can hold multiple projects that work together. For example, you might have one solution containing a web API project, a shared library project, and a test project.
+
+A **Project** is roughly equivalent to a Python package. It compiles into a single assembly (either a DLL library or an EXE application). Each project has a `.csproj` file that defines dependencies and build settings, much like Python's `requirements.txt` or Dart's `pubspec.yaml` but with more configuration details.
+
+Now here's where it gets interesting: **Namespaces** don't map directly to folder structures like Python packages do. A namespace is a logical grouping mechanism for organizing related types, preventing naming conflicts, and making code more discoverable. You can think of it as a way to create hierarchical categories for your code.
+
+Here's a concrete example to illustrate this. Imagine you're building a radiology imaging application:
+
+```
+RadiologyApp/                    (Solution)
+├── RadiologyApp.Core/           (Project - class library)
+│   ├── Imaging/                 (Folder)
+│   │   ├── DicomReader.cs       (File with class)
+│   │   └── ImageProcessor.cs
+│   ├── Models/                  (Folder)
+│   │   ├── Patient.cs
+│   │   └── Study.cs
+│   └── Utils/
+│       └── DateHelper.cs
+└── RadiologyApp.WebApi/         (Project - web API)
+    ├── Controllers/
+    │   └── StudiesController.cs
+    └── Program.cs
+```
+
+Inside `DicomReader.cs`, you might see:
+
+```csharp
+namespace RadiologyApp.Core.Imaging
+{
+    // This class belongs to the RadiologyApp.Core.Imaging namespace
+    public class DicomReader
+    {
+        public DicomImage ReadFile(string filePath)
+        {
+            // Implementation here
+        }
+        
+        private bool ValidateHeader(byte[] header)
+        {
+            // Helper method
+        }
+    }
+}
+```
+
+The namespace `RadiologyApp.Core.Imaging` is a logical identifier, not a physical folder path (though by convention, developers usually align them). You could technically put this file in any folder and keep the same namespace, but that would confuse everyone, so we don't do that.
+
+When you want to use `DicomReader` from another file, you have two options:
+
+```csharp
+// Option 1: Use the fully qualified name
+var reader = new RadiologyApp.Core.Imaging.DicomReader();
+
+// Option 2: Import the namespace at the top of the file
+using RadiologyApp.Core.Imaging;
+
+var reader = new DicomReader();  // Much cleaner!
+```
+
+The `using` statement is similar to Python's `import` or Dart's `import`, but it only brings namespaces into scope for that file, not individual classes (though C# 10+ introduced a feature to import static classes too).
+
+## Why Namespaces Matter
+
+Coming from Python where the package structure directly reflects the folder hierarchy, you might wonder why C# separates these concepts. The key insight is that namespaces provide logical organization that's independent of physical file location. This becomes powerful when you have large projects where you might want to reorganize files without changing how other code references them.
+
+For instance, in your AI radiology work, you might have:
+
+```csharp
+namespace RadiologyApp.Core.AI
+{
+    public class ModelInference { }
+    public class DataPreprocessor { }
+}
+
+namespace RadiologyApp.Core.AI.Models
+{
+    public class ChestXRayClassifier { }
+    public class CTSegmentationModel { }
+}
+```
+
+Both namespaces could have classes in the same physical folder, or in completely different folders. The namespace hierarchy is what matters for organization and preventing naming collisions.
+
+## C# Naming Conventions
+
+C# has well-established naming conventions that differ notably from Python's snake_case preference:
+
+**PascalCase** is used for almost everything public: classes, methods, properties, and namespaces. For example, `DicomReader`, `ReadFile`, `PatientName`.
+
+**camelCase** is used for private fields, local variables, and parameters. For example, `patientAge`, `filePath`, `isValidHeader`.
+
+**Private fields** sometimes use an underscore prefix with camelCase: `_patientCache`, `_connectionString`. This is a team preference; some teams use it, others don't.
+
+**Constants** use PascalCase, not UPPER_SNAKE_CASE like in Python: `MaxRetryCount`, `DefaultTimeout`.
+
+**Interfaces** always start with 'I': `IImageProcessor`, `IDicomParser`.
+
+Here's a complete example showing these conventions:
+
+```csharp
+namespace RadiologyApp.Core.Imaging
+{
+    // Interface starts with 'I'
+    public interface IImageProcessor
+    {
+        // Methods in PascalCase
+        DicomImage ProcessImage(string filePath);
+    }
+    
+    // Class in PascalCase
+    public class DicomImageProcessor : IImageProcessor
+    {
+        // Private field with underscore prefix
+        private readonly ILogger _logger;
+        
+        // Constant in PascalCase
+        private const int MaxImageSize = 4096;
+        
+        // Constructor in PascalCase (same as class name)
+        public DicomImageProcessor(ILogger logger)
+        {
+            // Parameter in camelCase
+            _logger = logger;
+        }
+        
+        // Public method in PascalCase
+        public DicomImage ProcessImage(string filePath)
+        {
+            // Local variable in camelCase
+            var imageData = ReadImageData(filePath);
+            return ProcessPixelData(imageData);
+        }
+        
+        // Private method in PascalCase
+        private byte[] ReadImageData(string filePath)
+        {
+            // Implementation
+        }
+        
+        // Property in PascalCase
+        public int ProcessedImageCount { get; private set; }
+    }
+}
+```
