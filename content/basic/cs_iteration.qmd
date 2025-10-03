@@ -1,0 +1,224 @@
+# Iterations and Loops
+
+Great! Since you're familiar with Dart and OOP, you'll find C#'s loop constructs very similar. Let me walk you through the essential iteration patterns in C#.
+
+## 1. The `for` Loop
+
+The classic counting loop - identical syntax to Dart:
+
+```csharp
+// Basic for loop
+for (int i = 0; i < 5; i++)
+{
+    Console.WriteLine($"Iteration: {i}");
+}
+
+// You can declare multiple variables
+for (int i = 0, j = 10; i < j; i++, j--)
+{
+    Console.WriteLine($"i: {i}, j: {j}");
+}
+```
+
+## 2. The `foreach` Loop
+
+For iterating over collections - very clean and type-safe:
+
+```csharp
+// With arrays
+string[] languages = { "C#", "Dart", "Python", "R" };
+foreach (string lang in languages)
+{
+    Console.WriteLine(lang);
+}
+
+// With Lists
+List<int> numbers = new List<int> { 1, 2, 3, 4, 5 };
+foreach (int num in numbers)
+{
+    Console.WriteLine(num * 2);
+}
+
+// Works with any IEnumerable<T>
+foreach (var kvp in dictionary)
+{
+    Console.WriteLine($"Key: {kvp.Key}, Value: {kvp.Value}");
+}
+```
+
+**Key Point**: You cannot modify the collection while iterating with `foreach` (similar to Dart).
+
+## 3. The `while` Loop
+
+```csharp
+int count = 0;
+while (count < 5)
+{
+    Console.WriteLine($"Count: {count}");
+    count++;
+}
+
+// Common pattern: reading until condition
+string input;
+while ((input = Console.ReadLine()) != "exit")
+{
+    Console.WriteLine($"You entered: {input}");
+}
+```
+
+## 4. The `do-while` Loop
+
+Executes at least once:
+
+```csharp
+int num;
+do
+{
+    Console.Write("Enter a positive number: ");
+    num = int.Parse(Console.ReadLine());
+} while (num <= 0);
+```
+
+## 5. Loop Control: `break` and `continue`
+
+```csharp
+// break - exit the loop
+for (int i = 0; i < 10; i++)
+{
+    if (i == 5) break;
+    Console.WriteLine(i);  // Prints 0-4
+}
+
+// continue - skip to next iteration
+for (int i = 0; i < 10; i++)
+{
+    if (i % 2 == 0) continue;
+    Console.WriteLine(i);  // Prints odd numbers only
+}
+```
+
+## 6. LINQ for Functional Iteration
+
+Since you know Python and R, you'll love LINQ - it's like Python's list comprehensions or R's dplyr:
+
+```csharp
+using System.Linq;
+
+List<int> numbers = new List<int> { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+
+// Filter and transform (like Python's filter + map)
+var evenSquares = numbers
+    .Where(n => n % 2 == 0)
+    .Select(n => n * n);
+
+foreach (var num in evenSquares)
+{
+    Console.WriteLine(num);  // 4, 16, 36, 64, 100
+}
+
+// Method chaining (similar to R's pipe operator %>%)
+var result = numbers
+    .Where(n => n > 3)
+    .OrderByDescending(n => n)
+    .Take(3)
+    .Sum();
+
+Console.WriteLine(result);  // Sum of top 3: 27
+```
+
+## Loop Performance Comparison
+
+```
+ASCII Visualization of Common Use Cases:
+
+for loop:        [Known count] ────────────> Best for index access
+                     │
+                     └─> int[] array, need index positions
+
+foreach loop:    [Unknown count] ──────────> Best for collections
+                     │
+                     └─> IEnumerable<T>, cleaner code
+
+while loop:      [Conditional] ────────────> Best for unknown iterations
+                     │
+                     └─> Reading streams, user input
+
+LINQ:           [Functional style] ────────> Best for transformations
+                     │
+                     └─> Data processing, filtering
+```
+
+## Practical Example: Combining Concepts
+
+Here's a complete example processing medical imaging data (relevant to your radiology work):
+
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class Program
+{
+    static void Main()
+    {
+        // Simulating CT scan slice data
+        List<ScanSlice> slices = new List<ScanSlice>();
+        
+        // Generate sample data
+        for (int i = 0; i < 10; i++)
+        {
+            slices.Add(new ScanSlice 
+            { 
+                SliceNumber = i + 1,
+                HounsfieldUnit = new Random().Next(-100, 100),
+                Thickness = 1.5
+            });
+        }
+
+        // Traditional foreach
+        Console.WriteLine("All slices:");
+        foreach (var slice in slices)
+        {
+            Console.WriteLine($"Slice {slice.SliceNumber}: {slice.HounsfieldUnit} HU");
+        }
+
+        // LINQ - find abnormal readings (HU > 50)
+        var abnormalSlices = slices
+            .Where(s => s.HounsfieldUnit > 50)
+            .OrderBy(s => s.SliceNumber)
+            .ToList();
+
+        Console.WriteLine($"\nAbnormal slices found: {abnormalSlices.Count}");
+        
+        // while loop - process until quality threshold
+        int index = 0;
+        while (index < slices.Count && slices[index].HounsfieldUnit < 80)
+        {
+            Console.WriteLine($"Processing slice {slices[index].SliceNumber}");
+            index++;
+        }
+    }
+}
+
+class ScanSlice
+{
+    public int SliceNumber { get; set; }
+    public int HounsfieldUnit { get; set; }
+    public double Thickness { get; set; }
+}
+```
+
+## Key Differences from Dart
+
+1. **String Interpolation**: C# uses `$"text {variable}"` vs Dart's `"text $variable"`
+2. **Type Inference**: C# uses `var` vs Dart's `var` or `final`
+3. **Collections**: C# has `List<T>` vs Dart's `List<T>` (similar but different APIs)
+4. **LINQ**: C# has powerful built-in query syntax (no direct Dart equivalent)
+
+## Try This Exercise
+
+Create a simple program that:
+1. Uses `for` to generate a list of 20 random numbers (0-100)
+2. Uses `foreach` to print them
+3. Uses LINQ to find all numbers > 50
+4. Uses `while` to sum numbers until the sum exceeds 200
