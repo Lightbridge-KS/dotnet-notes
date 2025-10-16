@@ -1,0 +1,299 @@
+# ASP.NET Core MVC?
+
+## Basic
+
+**What is ASP.NET Core MVC?**
+
+ASP.NET Core MVC is a web framework for building dynamic websites using the **Model-View-Controller** pattern. Think of it like Flutter for web, but server-side rendered instead of client-side.
+
+### The MVC Pattern
+
+```
+     User Request
+          ↓
+    ┌─────────────┐
+    │ Controller  │  ← Brain: Handles requests
+    └─────────────┘     & coordinates everything
+          ↓ ↑
+    ┌─────────────┐
+    │    Model    │  ← Data: Your business logic
+    └─────────────┘     & data structures
+          ↓
+    ┌─────────────┐
+    │    View     │  ← UI: HTML templates
+    └─────────────┘     (like Flutter widgets)
+          ↓
+     HTML Response
+```
+
+### Let's Build a Simple Book Library App
+
+#### Create Your First Project
+
+```bash
+# Create a new MVC project
+dotnet new mvc -n BookLibrary
+cd BookLibrary
+
+# Run it
+dotnet run
+```
+
+Visit `http://localhost:5000` (or the port shown) - you'll see a default website!
+
+#### Project Structure
+
+```
+BookLibrary/
+├── Controllers/          # Handle HTTP requests (like Flutter controllers)
+│   └── HomeController.cs
+├── Models/              # Data classes (like Dart models)
+├── Views/               # HTML templates
+│   ├── Home/
+│   │   └── Index.cshtml
+│   └── Shared/          # Reusable components
+│       └── _Layout.cshtml
+├── wwwroot/            # Static files (CSS, JS, images)
+├── Program.cs          # Entry point (like main() in Dart)
+└── appsettings.json    # Configuration
+```
+
+#### Create a Model
+
+Create `Models/Book.cs`:
+
+```csharp
+namespace BookLibrary.Models;
+
+public class Book
+{
+    public int Id { get; set; }
+    public string Title { get; set; } = "";
+    public string Author { get; set; } = "";
+    public int Year { get; set; }
+    
+    // Constructor (optional with C# 9+)
+    public Book(int id, string title, string author, int year)
+    {
+        Id = id;
+        Title = title;
+        Author = author;
+        Year = year;
+    }
+}
+```
+
+*Similar to Dart classes, but using Properties instead of fields*
+
+#### Create a Controller
+
+Create `Controllers/BookController.cs`:
+
+```csharp
+using Microsoft.AspNetCore.Mvc;
+using BookLibrary.Models;
+
+namespace BookLibrary.Controllers;
+
+public class BookController : Controller
+{
+    // Fake database (in real apps, use Entity Framework)
+    private static List<Book> _books = new()
+    {
+        new Book(1, "The Pragmatic Programmer", "Andy Hunt", 1999),
+        new Book(2, "Clean Code", "Robert Martin", 2008),
+        new Book(3, "Design Patterns", "Gang of Four", 1994)
+    };
+
+    // GET: /Book/
+    public IActionResult Index()
+    {
+        return View(_books);  // Pass model to view
+    }
+
+    // GET: /Book/Details/1
+    public IActionResult Details(int id)
+    {
+        var book = _books.FirstOrDefault(b => b.Id == id);
+        if (book == null)
+            return NotFound();
+        
+        return View(book);
+    }
+
+    // GET: /Book/Create
+    public IActionResult Create()
+    {
+        return View();
+    }
+
+    // POST: /Book/Create
+    [HttpPost]
+    public IActionResult Create(Book book)
+    {
+        if (ModelState.IsValid)  // Validation check
+        {
+            book.Id = _books.Max(b => b.Id) + 1;
+            _books.Add(book);
+            return RedirectToAction("Index");
+        }
+        return View(book);
+    }
+}
+```
+
+#### Create Views
+
+Create folder `Views/Book/` and add these files:
+
+**Views/Book/Index.cshtml** (List all books):
+```html
+@model List<Book>
+
+<h1>📚 Book Library</h1>
+
+<a asp-action="Create" class="btn btn-primary">Add New Book</a>
+
+<table class="table mt-3">
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Author</th>
+            <th>Year</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var book in Model)
+        {
+            <tr>
+                <td>@book.Title</td>
+                <td>@book.Author</td>
+                <td>@book.Year</td>
+                <td>
+                    <a asp-action="Details" asp-route-id="@book.Id">View</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+```
+
+**Views/Book/Details.cshtml** (Show one book):
+```html
+@model Book
+
+<h1>@Model.Title</h1>
+<dl>
+    <dt>Author:</dt>
+    <dd>@Model.Author</dd>
+    
+    <dt>Year:</dt>
+    <dd>@Model.Year</dd>
+</dl>
+
+<a asp-action="Index">Back to List</a>
+```
+
+**Views/Book/Create.cshtml** (Form to add book):
+```html
+@model Book
+
+<h1>Add New Book</h1>
+
+<form asp-action="Create" method="post">
+    <div class="mb-3">
+        <label asp-for="Title">Title</label>
+        <input asp-for="Title" class="form-control" />
+    </div>
+    
+    <div class="mb-3">
+        <label asp-for="Author">Author</label>
+        <input asp-for="Author" class="form-control" />
+    </div>
+    
+    <div class="mb-3">
+        <label asp-for="Year">Year</label>
+        <input asp-for="Year" class="form-control" />
+    </div>
+    
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+</form>
+```
+
+#### Add Navigation
+
+In `Views/Shared/_Layout.cshtml`, add a menu item (around line 25):
+```html
+<li class="nav-item">
+    <a class="nav-link text-dark" asp-controller="Book" asp-action="Index">Books</a>
+</li>
+```
+
+**Run and Test!**
+
+```bash
+dotnet run
+```
+
+Navigate to `http://localhost:5000/Book` to see your library!
+
+### Key Concepts Explained
+
+#### Routing
+```
+URL Pattern: /{Controller}/{Action}/{id?}
+
+/Book/Index     → BookController.Index()
+/Book/Details/5 → BookController.Details(5)
+/Book/Create    → BookController.Create()
+```
+
+#### Tag Helpers
+```html
+<!-- These special attributes generate URLs -->
+<a asp-controller="Book" asp-action="Index">
+<!-- Becomes: <a href="/Book/Index"> -->
+
+<input asp-for="Title" />
+<!-- Becomes: <input name="Title" id="Title" /> -->
+```
+
+#### Data Flow
+```
+1. User clicks "Add Book"
+        ↓
+2. GET /Book/Create
+        ↓
+3. BookController.Create() returns View()
+        ↓
+4. Create.cshtml renders form
+        ↓
+5. User fills form & submits
+        ↓
+6. POST /Book/Create with form data
+        ↓
+7. BookController.Create(Book book) processes
+        ↓
+8. Redirect to Index
+```
+
+### Coming from Dart/Flutter
+
+| Flutter/Dart | ASP.NET Core MVC |
+|-------------|------------------|
+| StatelessWidget | View (cshtml) |
+| State management | Controller |
+| Model classes | Model classes |
+| Navigator.push() | RedirectToAction() |
+| Widget tree | HTML DOM |
+| Hot reload | Hot reload (dotnet watch) |
+
+### Next Steps
+
+1. **Entity Framework Core**: Database ORM (like sqflite but more powerful)
+2. **Dependency Injection**: Built-in DI container
+3. **Authentication**: Identity framework
+4. **API**: Create REST APIs with controllers
+5. **Razor Pages**: Simpler alternative to MVC for page-focused apps

@@ -30,6 +30,9 @@ book:
     - part: CLI
       chapters: 
         - "content/basic/cs_cli-args.qmd"
+    - part: DotNet Apps
+      chapters: 
+        - "content/app/dotnet-mvc.qmd"
 
 format:
   html:
