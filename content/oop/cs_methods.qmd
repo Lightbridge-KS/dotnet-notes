@@ -1,0 +1,298 @@
+# Methods
+
+Let's dive into C# functions (called "methods" in C#). Since you know Dart, you'll find many similarities, but C# has some unique features too.
+
+## Basic
+
+### Basic Method Syntax
+
+In C#, methods are declared with an access modifier, return type, name, and parameters:
+
+```csharp
+// Basic method structure
+public int Add(int a, int b)
+{
+    return a + b;
+}
+
+// Void method (no return value)
+public void PrintMessage(string message)
+{
+    Console.WriteLine(message);
+}
+```
+
+**Key Difference from Dart:** C# requires explicit return types (no `var` for method return types).
+
+### Method Components Diagram
+
+```
+┌─────────────┬──────────┬────────────┬──────────────┐
+│   Access    │  Return  │   Method   │  Parameters  │
+│  Modifier   │   Type   │    Name    │              │
+└─────────────┴──────────┴────────────┴──────────────┘
+     public       int      Calculate    (int x, int y)
+                  ↓                           ↓
+              Must specify               Type required
+              (no 'var')                for each param
+```
+
+### Access Modifiers
+
+```csharp
+public class Calculator
+{
+    public int PublicMethod()      // Accessible everywhere
+    private int PrivateMethod()    // Only within this class
+    protected int ProtectedMethod() // This class & derived classes
+    internal int InternalMethod()  // Same assembly only
+    
+    // If no modifier specified, default is 'private' for class members
+    int DefaultIsPrivate()          // Same as private
+}
+```
+
+### Parameter Types & Modifiers
+
+#### Value vs Reference Parameters
+
+```csharp
+public class ParameterDemo
+{
+    // Regular value parameter (pass by value)
+    public void ByValue(int x)
+    {
+        x = 100; // Original variable unchanged
+    }
+    
+    // ref: Pass by reference (must be initialized)
+    public void ByRef(ref int x)
+    {
+        x = 100; // Original variable IS changed
+    }
+    
+    // out: Must assign value before returning
+    public void ByOut(out int result)
+    {
+        result = 42; // MUST assign before method ends
+    }
+    
+    // in: Read-only reference (performance optimization)
+    public void ByIn(in DateTime date)
+    {
+        // date = DateTime.Now; // ERROR! Can't modify
+        Console.WriteLine(date);
+    }
+}
+```
+
+#### Optional & Named Parameters
+
+```csharp
+public class OrderService
+{
+    // Optional parameters with default values
+    public void CreateOrder(
+        string product, 
+        int quantity = 1,        // Optional
+        bool express = false)    // Optional
+    {
+        Console.WriteLine($"{quantity}x {product}, Express: {express}");
+    }
+    
+    // Usage:
+    // CreateOrder("Laptop");                    // Uses defaults
+    // CreateOrder("Phone", 2);                  // Partial defaults
+    // CreateOrder("Tablet", express: true);     // Named parameter
+}
+```
+
+### Method Overloading
+
+Unlike Dart (which uses optional parameters), C# supports true method overloading:
+
+```csharp
+public class MathOperations
+{
+    public int Add(int a, int b)
+    {
+        return a + b;
+    }
+    
+    public double Add(double a, double b)  // Different parameter types
+    {
+        return a + b;
+    }
+    
+    public int Add(int a, int b, int c)    // Different parameter count
+    {
+        return a + b + c;
+    }
+}
+```
+
+### Static vs Instance (class) Methods
+
+```csharp
+public class User
+{
+    private string name;
+    
+    // Instance method (needs object)
+    public void SetName(string name)
+    {
+        this.name = name;  // 'this' refers to current instance
+    }
+    
+    // Static method (called on class, not instance)
+    public static User CreateGuest()
+    {
+        return new User { name = "Guest" };
+    }
+}
+
+// Usage:
+User user = new User();
+user.SetName("John");        // Instance method
+
+User guest = User.CreateGuest(); // Static method
+```
+
+### Expression-Bodied Members
+
+For concise single-expression methods (similar to Dart's arrow functions):
+
+```csharp
+public class Calculator
+{
+    // Traditional
+    public int Square(int x)
+    {
+        return x * x;
+    }
+    
+    // Expression-bodied (=>)
+    public int SquareArrow(int x) => x * x;
+    
+    // Works for properties too
+    public string Name { get; set; }
+    public string UpperName => Name?.ToUpper();  // Read-only computed property
+}
+```
+
+### Local Functions
+
+C# allows functions inside functions:
+
+```csharp
+public int ProcessData(int[] numbers)
+{
+    // Local function
+    int CalculateSum(int[] arr)
+    {
+        return arr.Sum();
+    }
+    
+    bool IsValid(int[] arr) => arr != null && arr.Length > 0;
+    
+    // Use local functions
+    if (IsValid(numbers))
+    {
+        return CalculateSum(numbers);
+    }
+    return 0;
+}
+```
+
+### Extension Methods
+
+Add methods to existing types without modifying them:
+
+```csharp
+public static class StringExtensions
+{
+    // 'this' keyword makes it an extension method
+    public static bool IsNullOrEmpty(this string str)
+    {
+        return string.IsNullOrEmpty(str);
+    }
+    
+    public static string Reverse(this string str)
+    {
+        return new string(str.Reverse().ToArray());
+    }
+}
+
+// Usage:
+string text = "Hello";
+bool empty = text.IsNullOrEmpty();  // Called like instance method
+string reversed = text.Reverse();   // "olleH"
+```
+
+### Async Methods (Brief)
+
+For asynchronous operations (similar to Dart's `Future`):
+
+```csharp
+public async Task<string> FetchDataAsync()
+{
+    await Task.Delay(1000);  // Simulate async work
+    return "Data loaded";
+}
+
+public async Task ProcessAsync()  // Task = void for async
+{
+    string data = await FetchDataAsync();
+    Console.WriteLine(data);
+}
+```
+
+### Quick Practice Example
+
+Create a file `Methods.cs`:
+
+```csharp
+using System;
+
+public class MethodDemo
+{
+    public static void Main()
+    {
+        var demo = new MethodDemo();
+        
+        // Test different methods
+        Console.WriteLine(demo.Add(5, 3));
+        demo.ModifyByRef(ref int x = 10);
+        Console.WriteLine($"After ref: {x}");
+        
+        demo.GetValues(out int a, out int b);
+        Console.WriteLine($"Out values: {a}, {b}");
+    }
+    
+    public int Add(int x, int y) => x + y;
+    
+    public void ModifyByRef(ref int value)
+    {
+        value *= 2;
+    }
+    
+    public void GetValues(out int x, out int y)
+    {
+        x = 100;
+        y = 200;
+    }
+}
+```
+
+Run it:
+```bash
+dotnet run Methods.cs
+```
+
+**Key Takeaways**
+
+1. **Explicit Types:** Unlike Dart's `var`, C# methods need explicit return types
+2. **Overloading:** True method overloading by parameter types/count
+3. **ref/out/in:** Fine-grained control over parameter passing
+4. **Extension Methods:** Add functionality to existing types
+5. **Expression Bodies:** Use `=>` for concise single-expression methods

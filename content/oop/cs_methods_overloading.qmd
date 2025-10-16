@@ -1,0 +1,328 @@
+## Method Overloading in C#
+
+Method overloading allows you to have **multiple methods with the same name** but **different signatures** in the same class. This is something **Dart doesn't support** (Dart uses optional/named parameters instead).
+
+## What Makes a Method Signature?
+
+A method signature consists of:
+- Method name
+- Number of parameters
+- Type of parameters
+- Order of parameters
+
+**NOT** part of the signature:
+- Return type
+- Parameter names
+- Access modifiers
+
+```
+Method Signature Components:
+┌──────────────────────────────────────────────┐
+│            Method Signature                   │
+├──────────────────────────────────────────────┤
+│  ✓ Method Name                               │
+│  ✓ Parameter Count                           │
+│  ✓ Parameter Types                           │
+│  ✓ Parameter Order                           │
+├──────────────────────────────────────────────┤
+│  ✗ Return Type (NOT part of signature)       │
+│  ✗ Parameter Names                           │
+│  ✗ Access Modifiers                          │
+└──────────────────────────────────────────────┘
+```
+
+## Basic Examples
+
+```csharp
+public class Calculator
+{
+    // Method 1: Two integers
+    public int Add(int a, int b)
+    {
+        Console.WriteLine("Adding two integers");
+        return a + b;
+    }
+    
+    // Method 2: Three integers (different parameter count)
+    public int Add(int a, int b, int c)
+    {
+        Console.WriteLine("Adding three integers");
+        return a + b + c;
+    }
+    
+    // Method 3: Two doubles (different parameter types)
+    public double Add(double a, double b)
+    {
+        Console.WriteLine("Adding two doubles");
+        return a + b;
+    }
+    
+    // Method 4: String concatenation (completely different types)
+    public string Add(string a, string b)
+    {
+        Console.WriteLine("Concatenating strings");
+        return a + b;
+    }
+}
+
+// Usage:
+var calc = new Calculator();
+calc.Add(5, 10);           // Calls Method 1 -> 15
+calc.Add(5, 10, 15);       // Calls Method 2 -> 30
+calc.Add(5.5, 10.5);       // Calls Method 3 -> 16.0
+calc.Add("Hello", "World"); // Calls Method 4 -> "HelloWorld"
+```
+
+## How the Compiler Chooses Which Method
+
+The compiler uses **method resolution** to pick the best match:
+
+```
+Method Call: Add(5, 10)
+                ↓
+┌─────────────────────────────────┐
+│  Compiler Resolution Process     │
+├─────────────────────────────────┤
+│ 1. Find all methods named "Add"  │
+│ 2. Filter by parameter count (2) │
+│ 3. Check type compatibility      │
+│ 4. Select best match             │
+└─────────────────────────────────┘
+                ↓
+    Selects: Add(int a, int b)
+```
+
+## Valid vs Invalid Overloads
+
+```csharp
+public class OverloadExamples
+{
+    // ✅ VALID OVERLOADS
+    public void Process(int x) { }
+    public void Process(string x) { }              // Different type
+    public void Process(int x, int y) { }          // Different count
+    public void Process(double x, int y) { }       // Different types
+    public void Process(int x, double y) { }       // Different order
+    
+    // ❌ INVALID OVERLOADS (Won't compile)
+    public int Process(int x) { return x; }        // ERROR! Same signature
+    // Return type alone doesn't make it different
+    
+    public void Process(int num) { }               // ERROR! Same signature
+    // Parameter names don't matter
+    
+    // ❌ This would also fail:
+    // private void Process(int x) { }             // ERROR! Access modifier doesn't matter
+}
+```
+
+## Overloading with Type Hierarchies
+
+```csharp
+public class Animal { }
+public class Dog : Animal { }
+
+public class PetShop
+{
+    public void Feed(Animal animal)
+    {
+        Console.WriteLine("Feeding an animal");
+    }
+    
+    public void Feed(Dog dog)
+    {
+        Console.WriteLine("Feeding a dog specifically");
+    }
+}
+
+// Usage:
+var shop = new PetShop();
+Animal myAnimal = new Animal();
+Dog myDog = new Dog();
+Animal dogAsAnimal = new Dog();  // Dog referenced as Animal
+
+shop.Feed(myAnimal);      // "Feeding an animal"
+shop.Feed(myDog);         // "Feeding a dog specifically"
+shop.Feed(dogAsAnimal);   // "Feeding an animal" (compile-time type matters!)
+```
+
+## Comparing with Dart's Approach
+
+Since Dart doesn't have method overloading, you'd use optional/named parameters:
+
+```dart
+// DART APPROACH (what you're familiar with)
+class Calculator {
+  num add(num a, num b, [num? c]) {
+    if (c != null) {
+      return a + b + c;
+    }
+    return a + b;
+  }
+}
+```
+
+```csharp
+// C# APPROACH (using overloading)
+public class Calculator
+{
+    public int Add(int a, int b) => a + b;
+    public int Add(int a, int b, int c) => a + b + c;
+    
+    // OR C# can also use optional parameters like Dart:
+    public int AddOptional(int a, int b, int c = 0) => a + b + c;
+}
+```
+
+## Practical Example: File Reader
+
+```csharp
+public class FileReader
+{
+    // Read with default encoding
+    public string ReadFile(string path)
+    {
+        return ReadFile(path, Encoding.UTF8);
+    }
+    
+    // Read with specific encoding
+    public string ReadFile(string path, Encoding encoding)
+    {
+        return File.ReadAllText(path, encoding);
+    }
+    
+    // Read with options
+    public string ReadFile(string path, Encoding encoding, bool detectBOM)
+    {
+        // Implementation with BOM detection
+        var bytes = File.ReadAllBytes(path);
+        // ... detect BOM and process
+        return encoding.GetString(bytes);
+    }
+    
+    // Read lines instead of full content
+    public string[] ReadFileLines(string path)
+    {
+        return File.ReadAllLines(path);
+    }
+}
+
+// Usage becomes very intuitive:
+var reader = new FileReader();
+string content1 = reader.ReadFile("file.txt");                          // Default
+string content2 = reader.ReadFile("file.txt", Encoding.ASCII);         // Custom encoding
+string content3 = reader.ReadFile("file.txt", Encoding.UTF8, true);    // With BOM detection
+string[] lines = reader.ReadFileLines("file.txt");                     // Different return type
+```
+
+## Constructor Overloading
+
+Classes can have multiple constructors too:
+
+```csharp
+public class Person
+{
+    public string Name { get; set; }
+    public int Age { get; set; }
+    public string Email { get; set; }
+    
+    // Default constructor
+    public Person()
+    {
+        Name = "Unknown";
+        Age = 0;
+    }
+    
+    // Constructor with name only
+    public Person(string name)
+    {
+        Name = name;
+        Age = 0;
+    }
+    
+    // Constructor with name and age
+    public Person(string name, int age)
+    {
+        Name = name;
+        Age = age;
+    }
+    
+    // Constructor with all properties
+    public Person(string name, int age, string email)
+    {
+        Name = name;
+        Age = age;
+        Email = email;
+    }
+}
+
+// Usage:
+var p1 = new Person();                              // Default
+var p2 = new Person("Alice");                       // Name only
+var p3 = new Person("Bob", 25);                     // Name and age
+var p4 = new Person("Charlie", 30, "c@email.com");  // All properties
+```
+
+## Benefits of Method Overloading
+
+1. **Intuitive API**: Same method name for similar operations
+2. **Type Safety**: Compiler ensures correct types at compile-time
+3. **Performance**: No runtime type checking needed
+4. **Cleaner Code**: No need for different method names like `AddInts()`, `AddDoubles()`, etc.
+
+## Try It Yourself
+
+Create `Overloading.cs`:
+
+```csharp
+using System;
+
+public class OverloadDemo
+{
+    public static void Main()
+    {
+        var demo = new OverloadDemo();
+        
+        // Compiler automatically selects the right method
+        demo.Display(42);
+        demo.Display("Hello");
+        demo.Display(3.14);
+        demo.Display(10, 20);
+        
+        // With type inference
+        var result1 = demo.Calculate(5, 10);      // Returns int
+        var result2 = demo.Calculate(5.5, 10.5);  // Returns double
+        
+        Console.WriteLine($"Int result: {result1}");
+        Console.WriteLine($"Double result: {result2}");
+    }
+    
+    public void Display(int value) 
+        => Console.WriteLine($"Integer: {value}");
+    
+    public void Display(string value) 
+        => Console.WriteLine($"String: {value}");
+    
+    public void Display(double value) 
+        => Console.WriteLine($"Double: {value}");
+    
+    public void Display(int x, int y) 
+        => Console.WriteLine($"Two integers: {x}, {y}");
+    
+    public int Calculate(int a, int b) => a + b;
+    public double Calculate(double a, double b) => a + b;
+}
+```
+
+Run it:
+```bash
+dotnet run Overloading.cs
+```
+
+## Key Takeaways
+
+- **Method overloading** = multiple methods with same name, different signatures
+- Compiler picks the best match at **compile-time** (not runtime)
+- Makes APIs more intuitive and type-safe
+- Different from Dart's optional parameters approach
+- Can combine with optional parameters for even more flexibility
