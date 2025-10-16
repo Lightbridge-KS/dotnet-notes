@@ -17,6 +17,7 @@ book:
         - "content/basic/syntax-basic-cheatsheet.qmd"
         - "content/basic/cs_datatypes.qmd"
         - "content/basic/cs_iteration.qmd"
+        - "content/basic/cs_attributes.qmd"
         - "content/basic/cs_linq.qmd"
         - "content/orgs/cs_code-organization.qmd"
         - "content/orgs/cs_program.qmd"

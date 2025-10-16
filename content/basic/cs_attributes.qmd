@@ -1,0 +1,188 @@
+# Attributes
+
+::: {.callout-note appearance="default" collapse="false"}
+Q: What is this `[...]` thing that appears above the methods in C#?
+:::
+
+
+Those `[...]` things above methods (and classes, properties, etc.) in C# are called **Attributes**. Since you're familiar with Dart, they're similar to annotations in Dart (the `@` syntax).
+
+## What are Attributes?
+
+Attributes are metadata tags that provide declarative information about your code elements. They don't directly change the behavior of the code, but they provide information that can be used by:
+- The compiler
+- The runtime
+- Other tools (like analyzers, serializers, etc.)
+
+## Basic Syntax Comparison
+
+```csharp
+// C# - Using Attributes
+[Obsolete("Use NewMethod instead")]
+[HttpGet]
+public string OldMethod() 
+{
+    return "Hello";
+}
+```
+
+```dart
+// Dart - Using Annotations (your familiar syntax)
+@deprecated
+@override
+String oldMethod() {
+    return "Hello";
+}
+```
+
+## Common C# Attributes
+
+Here's a simple diagram showing attribute usage:
+
+```
+                 ┌─────────────────┐
+                 │   [Attribute]   │
+                 └────────┬────────┘
+                          │
+                          ▼
+            ┌──────────────────────────┐
+            │   Target (Class/Method/  │
+            │   Property/Field/etc.)   │
+            └──────────────────────────┘
+```
+
+### 1. **System Attributes**
+```csharp
+// Mark something as obsolete
+[Obsolete("This method is deprecated. Use CalculateV2 instead.")]
+public int Calculate() { }
+
+// Conditional compilation
+[Conditional("DEBUG")]
+public void DebugLog(string message) { }
+
+// Serialization
+[Serializable]
+public class Person { }
+```
+
+### 2. **ASP.NET Core Attributes** (for web APIs)
+```csharp
+[ApiController]
+[Route("api/[controller]")]
+public class UsersController : ControllerBase
+{
+    [HttpGet]
+    public IActionResult GetAll() { }
+    
+    [HttpPost]
+    [Authorize]
+    public IActionResult Create([FromBody] User user) { }
+}
+```
+
+### 3. **Data Validation Attributes**
+```csharp
+public class User
+{
+    [Required]
+    [StringLength(100)]
+    public string Name { get; set; }
+    
+    [Range(18, 120)]
+    public int Age { get; set; }
+    
+    [EmailAddress]
+    public string Email { get; set; }
+}
+```
+
+## Creating Custom Attributes
+
+You can even create your own attributes:
+
+```csharp
+// Define a custom attribute
+public class AuthorAttribute : Attribute
+{
+    public string Name { get; }
+    public string Date { get; }
+    
+    public AuthorAttribute(string name, string date)
+    {
+        Name = name;
+        Date = date;
+    }
+}
+
+// Use your custom attribute
+[Author("Dr. Smith", "2024-01-15")]
+public class MedicalImageProcessor
+{
+    // Your radiology AI code here
+}
+```
+
+## Attribute Parameters
+
+Attributes can have:
+- **Positional parameters** (required)
+- **Named parameters** (optional)
+
+```csharp
+// Positional parameter: "message"
+// Named parameter: DiagnosticId
+[Obsolete("Use new API", DiagnosticId = "DIAG001")]
+public void OldMethod() { }
+```
+
+## Practical Example for Your Domain
+
+Since you work with radiology AI, here's a relevant example:
+
+```csharp
+public class DicomImage
+{
+    [Required]
+    [RegularExpression(@"^\d+\.\d+\.\d+")]  // DICOM UID pattern
+    public string StudyInstanceUID { get; set; }
+    
+    [Range(0, 4095)]  // 12-bit grayscale range
+    public int PixelValue { get; set; }
+    
+    [JsonPropertyName("modality")]  // JSON serialization
+    public string Modality { get; set; }  // CT, MR, CR, etc.
+}
+```
+
+## Try It Yourself
+
+Create a simple console app to experiment:
+
+```csharp
+using System;
+using System.Diagnostics;
+
+class Program
+{
+    static void Main()
+    {
+        TestMethod();
+        DebugOnlyMethod();
+    }
+    
+    [Obsolete("Just for testing")]
+    static void TestMethod()
+    {
+        Console.WriteLine("This method is obsolete!");
+    }
+    
+    [Conditional("DEBUG")]
+    static void DebugOnlyMethod()
+    {
+        Console.WriteLine("This only runs in DEBUG mode");
+    }
+}
+```
+
+When you compile this, you'll see a warning for the obsolete method, and `DebugOnlyMethod` will only execute when building in DEBUG configuration.
