@@ -33,6 +33,8 @@ book:
     - part: DotNet Apps
       chapters: 
         - "content/app/dotnet-mvc.qmd"
+        - "content/app/dotnet-react.qmd"
+        - "content/app/dotnet-react-ex.qmd"
 
 format:
   html:
