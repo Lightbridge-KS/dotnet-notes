@@ -1,0 +1,175 @@
+# Numeric Types in C#
+
+C# has several numeric types, each designed for different purposes. Let me break them down for you:
+
+## Integer Types (Whole Numbers)
+
+
+```
+Size (bits)    Signed          Unsigned        Range
+─────────────────────────────────────────────────────────────
+8 bits         sbyte           byte            -128 to 127
+                                               0 to 255
+
+16 bits        short           ushort          -32,768 to 32,767
+                                               0 to 65,535
+
+32 bits        int             uint            -2.1B to 2.1B
+                                               0 to 4.3B
+
+64 bits        long            ulong           -9.2E18 to 9.2E18
+                                               0 to 1.8E19
+```
+
+**Most commonly used:** `int` (default for integers)
+
+## Floating-Point Types (Decimals)
+
+
+```
+Type           Size      Precision       Range                    Use Case
+──────────────────────────────────────────────────────────────────────────
+float          32-bit    ~6-7 digits     ±1.5E-45 to ±3.4E38     Graphics, games
+double         64-bit    ~15-16 digits   ±5.0E-324 to ±1.7E308   Scientific
+decimal        128-bit   28-29 digits    ±1.0E-28 to ±7.9E28     Financial
+```
+
+**Most commonly used:** `double` (default for decimals) and `decimal` (for money)
+
+## Key Differences
+
+
+Here's a practical example showing the differences:
+
+```csharp
+// Integer types - NO fractional part
+int patientAge = 45;
+long populationCount = 7_800_000_000L;  // Use 'L' suffix for long
+byte pixelValue = 255;
+
+// Floating-point types - WITH fractional part
+float bodyTemp = 36.5f;        // Use 'f' suffix for float
+double radiationDose = 2.5;    // Default for decimal literals
+decimal hospitalBill = 1234.56m;  // Use 'm' suffix for decimal
+
+// Demonstrating precision differences
+float f = 0.1f + 0.2f;
+double d = 0.1 + 0.2;
+decimal dec = 0.1m + 0.2m;
+
+Console.WriteLine($"float:   {f}");      // 0.30000001
+Console.WriteLine($"double:  {d}");      // 0.30000000000000004
+Console.WriteLine($"decimal: {dec}");    // 0.3 (EXACT!)
+```
+
+## When to Use Each Type?
+
+
+**For Medical/Radiology Applications:**
+
+```csharp
+// Patient data
+int patientId = 12345;           // Whole number identifier
+byte age = 67;                   // Age (0-255 is enough)
+double weight = 72.5;            // Weight in kg
+double height = 175.3;           // Height in cm
+
+// Medical measurements
+decimal medicationDose = 2.5m;   // Precise dosing
+double hounsefieldUnit = -1000.0; // CT values
+float pixelIntensity = 0.856f;   // Normalized pixel value
+
+// Image dimensions
+int imageWidth = 512;
+int imageHeight = 512;
+long totalPixels = 512L * 512L;
+
+// Financial
+decimal procedureCost = 15000.00m;  // Always use decimal for money!
+```
+
+## Comparison with Dart
+
+
+Since you know Dart, here's a quick comparison:
+
+```
+Dart                    C#
+────────────────────────────────────────
+int                     int, long
+double                  double, float, decimal
+num (int or double)     (no direct equivalent)
+```
+
+**Key difference:** In Dart, you typically use `int` and `double`. In C#, you have more granular control with multiple integer sizes and the special `decimal` type for financial precision.
+
+## Memory Visualization
+
+
+```
+Variable: int x = 100
+
+Memory:
+┌─────────────┐
+│  00000000   │ ← byte 3 (most significant)
+│  00000000   │ ← byte 2
+│  00000000   │ ← byte 1
+│  01100100   │ ← byte 0 (least significant) = 100
+└─────────────┘
+   32 bits total
+```
+
+```
+Variable: decimal price = 99.99m
+
+Memory:
+┌─────────────┐
+│  Sign       │
+│  Scale      │
+│  High bits  │
+│  Mid bits   │
+│  Low bits   │
+└─────────────┘
+  128 bits total (4x more than double!)
+```
+
+## Quick Rules of Thumb
+
+
+1. **Default choice:** Use `int` for whole numbers, `double` for decimals
+2. **Money/Financial:** ALWAYS use `decimal`
+3. **Large numbers:** Use `long`
+4. **Memory-critical:** Use smaller types (`byte`, `short`)
+5. **Scientific calculations:** Use `double`
+6. **Graphics/Gaming:** Use `float`
+
+## Try It Yourself
+
+
+Create a simple program to experiment:
+
+```csharp
+// Save as Program.cs
+Console.WriteLine("=== Numeric Types Demo ===\n");
+
+// Size comparison
+Console.WriteLine($"int size: {sizeof(int)} bytes");
+Console.WriteLine($"long size: {sizeof(long)} bytes");
+Console.WriteLine($"decimal size: {sizeof(decimal)} bytes");
+Console.WriteLine($"double size: {sizeof(double)} bytes\n");
+
+// Range demonstration
+Console.WriteLine($"int.MaxValue: {int.MaxValue}");
+Console.WriteLine($"long.MaxValue: {long.MaxValue}\n");
+
+// Precision test
+decimal d1 = 1.0m / 3.0m;
+double d2 = 1.0 / 3.0;
+Console.WriteLine($"decimal: {d1}");
+Console.WriteLine($"double:  {d2}");
+```
+
+Run it with:
+```zsh
+dotnet run
+```
