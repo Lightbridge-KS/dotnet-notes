@@ -40,6 +40,7 @@ book:
     - part: DotNet WebAPI
       chapters: 
         - "content/models/model_DTO_table.qmd"
+        - "content/models/webapi_controller-vs-minimal.qmd"
 
 format:
   html:
