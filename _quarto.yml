@@ -37,6 +37,9 @@ book:
         - "content/app/dotnet-mvc.qmd"
         - "content/app/dotnet-react.qmd"
         - "content/app/dotnet-react-ex.qmd"
+    - part: DotNet WebAPI
+      chapters: 
+        - "content/models/model_DTO_table.qmd"
 
 format:
   html:

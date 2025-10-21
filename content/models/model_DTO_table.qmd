@@ -1,0 +1,388 @@
+# Table-like DTOs
+
+::: {.callout-note appearance="default" collapse="false"}
+**Q:** What’s the appropriate object (in C#) used as a DTO for sending table-like data structure via JSON REST API?
+:::
+
+## Basic DTOs
+
+For table-like data in C# DTOs, you'll want to use **strongly-typed collections** rather than loosely-typed structures. Here's the recommended approach:
+
+### Best Practice: `List<T>` or `IEnumerable<T>`
+
+
+The most common and recommended approach is using a generic collection of a strongly-typed class or record:
+
+```csharp
+// Define a class/record for each "row"
+public record PatientRecord(
+    int Id,
+    string Name,
+    DateTime BirthDate,
+    string Gender
+);
+
+// Your DTO wrapping the collection
+public class PatientListDto
+{
+    public List<PatientRecord> Patients { get; set; } = new();
+    public int TotalCount { get; set; }
+}
+```
+
+**JSON Output:**
+```json
+{
+  "patients": [
+    { "id": 1, "name": "John Doe", "birthDate": "1980-05-15", "gender": "M" },
+    { "id": 2, "name": "Jane Smith", "birthDate": "1992-08-22", "gender": "F" }
+  ],
+  "totalCount": 2
+}
+```
+
+### Conceptual Structure
+
+
+```
+DTO (Wrapper)
+│
+└── List<RowModel>
+    │
+    ├── RowModel (row 1)
+    │   ├── Property1
+    │   ├── Property2
+    │   └── Property3
+    │
+    ├── RowModel (row 2)
+    │   ├── Property1
+    │   ├── Property2
+    │   └── Property3
+    │
+    └── ...
+```
+
+### Why NOT `DataTable`?
+
+
+While C# has a `DataTable` class (from `System.Data`), it's **not recommended** for REST APIs because:
+
+- ❌ Loses type safety
+- ❌ Produces verbose JSON
+- ❌ Hard to document in API specs (OpenAPI/Swagger)
+- ❌ No IntelliSense support
+- ❌ Legacy approach from ADO.NET era
+
+### Alternative: Return Collection Directly
+
+
+For simple cases, you can return the collection directly without wrapping:
+
+```csharp
+// API Controller
+[HttpGet]
+public async Task<ActionResult<List<PatientRecord>>> GetPatients()
+{
+    var patients = await _repository.GetAllAsync();
+    return Ok(patients);
+}
+```
+
+**JSON Output:**
+```json
+[
+  { "id": 1, "name": "John Doe", "birthDate": "1980-05-15", "gender": "M" },
+  { "id": 2, "name": "Jane Smith", "birthDate": "1992-08-22", "gender": "F" }
+]
+```
+
+### Comparison to Dart/Flutter
+
+
+If you're familiar with Flutter, this is similar to:
+
+```dart
+// Dart equivalent
+class PatientRecord {
+  final int id;
+  final String name;
+  final DateTime birthDate;
+  final String gender;
+  
+  PatientRecord({required this.id, ...});
+}
+
+// Collection
+List<PatientRecord> patients = [...];
+```
+
+The C# `record` type (introduced in C# 9) is similar to Dart's data classes with immutability by default.
+
+---
+
+**Quick tip:** Use `record` for DTOs when you want immutability and value-based equality, or use `class` when you need mutability and reference equality.
+
+## REST API with DTO
+
+::: {.callout-note appearance="default" collapse="false"}
+**Q:** show me how to set up a simple REST API endpoint with these DTOs, if I use .NET webapi template. Just go for synchronous API for simplicity.
+:::
+
+Let me walk you through creating a simple REST API with .NET Web API template.
+
+### Step 1: Create the Project
+
+
+```zsh
+# Create a new Web API project
+dotnet new webapi -n PatientApi
+
+# Navigate to the project
+cd PatientApi
+
+# Open in VS Code
+code .
+```
+
+### Step 2: Project Structure
+
+
+After creation, you'll see:
+
+```
+PatientApi/
+│
+├── Controllers/          # Your API endpoints here
+├── Program.cs           # App entry point & configuration
+├── appsettings.json     # Configuration
+└── PatientApi.csproj    # Project file
+```
+
+### Step 3: Create DTOs/Models
+
+
+Create a new folder and files:
+
+```zsh
+mkdir Models
+touch Models/PatientRecord.cs
+touch Models/PatientListDto.cs
+```
+
+**Models/PatientRecord.cs:**
+```csharp
+namespace PatientApi.Models;
+
+public record PatientRecord(
+    int Id,
+    string Name,
+    DateTime BirthDate,
+    string Gender
+);
+```
+
+**Models/PatientListDto.cs:**
+```csharp
+namespace PatientApi.Models;
+
+public class PatientListDto
+{
+    public List<PatientRecord> Patients { get; set; } = new();
+    public int TotalCount { get; set; }
+}
+```
+
+### Step 4: Create Controller
+
+
+```zsh
+touch Controllers/PatientsController.cs
+```
+
+**Controllers/PatientsController.cs:**
+```csharp
+using Microsoft.AspNetCore.Mvc;
+using PatientApi.Models;
+
+namespace PatientApi.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class PatientsController : ControllerBase
+{
+    // In-memory data (simulating database)
+    private static readonly List<PatientRecord> _patients = new()
+    {
+        new PatientRecord(1, "John Doe", new DateTime(1980, 5, 15), "M"),
+        new PatientRecord(2, "Jane Smith", new DateTime(1992, 8, 22), "F"),
+        new PatientRecord(3, "Bob Johnson", new DateTime(1975, 12, 3), "M")
+    };
+
+    // GET: api/patients
+    [HttpGet]
+    public ActionResult<PatientListDto> GetAll()
+    {
+        var dto = new PatientListDto
+        {
+            Patients = _patients,
+            TotalCount = _patients.Count
+        };
+        
+        return Ok(dto);
+    }
+
+    // GET: api/patients/1
+    [HttpGet("{id}")]
+    public ActionResult<PatientRecord> GetById(int id)
+    {
+        var patient = _patients.FirstOrDefault(p => p.Id == id);
+        
+        if (patient == null)
+        {
+            return NotFound(new { message = $"Patient with ID {id} not found" });
+        }
+        
+        return Ok(patient);
+    }
+
+    // POST: api/patients
+    [HttpPost]
+    public ActionResult<PatientRecord> Create(CreatePatientDto dto)
+    {
+        var newId = _patients.Max(p => p.Id) + 1;
+        var newPatient = new PatientRecord(
+            newId,
+            dto.Name,
+            dto.BirthDate,
+            dto.Gender
+        );
+        
+        _patients.Add(newPatient);
+        
+        return CreatedAtAction(
+            nameof(GetById),
+            new { id = newId },
+            newPatient
+        );
+    }
+}
+
+// DTO for creating new patient (without ID)
+public record CreatePatientDto(
+    string Name,
+    DateTime BirthDate,
+    string Gender
+);
+```
+
+### Step 5: Run the API
+
+
+```zsh
+dotnet run
+```
+
+You'll see output like:
+```
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://localhost:5000
+```
+
+### Step 6: Test the Endpoints
+
+
+**Option 1: Using curl**
+
+```zsh
+# Get all patients
+curl http://localhost:5000/api/patients | jq
+
+# Get patient by ID
+curl http://localhost:5000/api/patients/1 | jq
+
+# Create new patient
+curl -X POST http://localhost:5000/api/patients \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Alice Brown",
+    "birthDate": "1988-03-10",
+    "gender": "F"
+  }' | jq
+```
+
+**Option 2: Using Swagger UI**
+
+Navigate to: `http://localhost:5000/swagger`
+
+You'll see an interactive API documentation where you can test endpoints.
+
+
+### API Flow Diagram
+
+
+```
+Client Request
+    ↓
+    ↓  HTTP GET /api/patients
+    ↓
+[Route Matching]
+    ↓
+[Controller: PatientsController]
+    ↓
+[Action Method: GetAll()]
+    ↓
+[Business Logic: Get data from _patients]
+    ↓
+[Create DTO: PatientListDto]
+    ↓
+[Serialize to JSON]
+    ↓
+    ↓  HTTP 200 OK + JSON
+    ↓
+Client Response
+```
+
+### Expected JSON Responses
+
+
+**GET /api/patients:**
+```json
+{
+  "patients": [
+    {
+      "id": 1,
+      "name": "John Doe",
+      "birthDate": "1980-05-15T00:00:00",
+      "gender": "M"
+    },
+    {
+      "id": 2,
+      "name": "Jane Smith",
+      "birthDate": "1992-08-22T00:00:00",
+      "gender": "F"
+    }
+  ],
+  "totalCount": 2
+}
+```
+
+**GET /api/patients/1:**
+```json
+{
+  "id": 1,
+  "name": "John Doe",
+  "birthDate": "1980-05-15T00:00:00",
+  "gender": "M"
+}
+```
+
+### Key Concepts
+
+
+1. **`[ApiController]`**: Enables automatic model validation and standardized responses
+2. **`[Route]`**: Defines URL pattern (`api/patients`)
+3. **`ActionResult<T>`**: Return type that can be data or HTTP status code
+4. **`Ok(data)`**: Returns HTTP 200 with data
+5. **`NotFound()`**: Returns HTTP 404
+6. **`CreatedAtAction()`**: Returns HTTP 201 with location header
+
