@@ -22,6 +22,7 @@ book:
         - "content/basic/cs_linq.qmd"
         - "content/orgs/cs_code-organization.qmd"
         - "content/orgs/cs_program.qmd"
+        - "content/basic/cs_code_docs.qmd"
     - part: OOP
       chapters: 
         - "content/oop/cs_type-inferred-object-creation.qmd"
