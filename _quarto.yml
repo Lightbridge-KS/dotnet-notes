@@ -15,8 +15,6 @@ book:
     - part: C# Lang
       chapters: 
         - "content/basic/syntax-basic-cheatsheet.qmd"
-        - "content/basic/cs_datatypes.qmd"
-        - "content/datatypes/datatypes_numeric.qmd"
         - "content/basic/cs_flow_control.qmd"
         - "content/basic/cs_iteration.qmd"
         - "content/basic/cs_attributes.qmd"
@@ -24,6 +22,11 @@ book:
         - "content/orgs/cs_code-organization.qmd"
         - "content/orgs/cs_program.qmd"
         - "content/basic/cs_code_docs.qmd"
+    - part: Data, Types, Interface
+      chapters: 
+        - "content/basic/cs_datatypes.qmd"
+        - "content/datatypes/datatypes_numeric.qmd"
+        - "content/datatypes/interface_IEnumerable.qmd"
     - part: OOP
       chapters: 
         - "content/oop/cs_type-inferred-object-creation.qmd"

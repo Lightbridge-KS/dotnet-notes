@@ -1,0 +1,178 @@
+# IEnumerable
+
+`IEnumerable` (and its generic version `IEnumerable<T>`) is the **base interface** for all collections that can be iterated over in C#.
+
+
+## What is IEnumerable?
+
+
+Think of `IEnumerable<T>` as similar to:
+- **Dart's `Iterable<T>`** - almost identical concept!
+- **Python's iterable protocol** - anything you can loop over with `for...in`
+
+It represents a **forward-only sequence** of elements that you can iterate through one at a time.
+
+
+## The Collection Hierarchy
+
+
+Here's how C# collections relate to each other:
+
+```
+IEnumerable<T>              ← Base interface (can iterate)
+    ↓
+ICollection<T>              ← Adds Count, Add, Remove, Contains
+    ↓
+    ├─→ IList<T>            ← Adds indexing [i], Insert
+    │       ↓
+    │       └─→ List<T>     ← Concrete dynamic array
+    │
+    ├─→ ISet<T>             ← Unique elements
+    │       ↓
+    │       └─→ HashSet<T>  ← Concrete hash set
+    │
+    └─→ IReadOnlyCollection<T>
+
+IDictionary<K,V>            ← Key-value pairs
+    ↓
+    └─→ Dictionary<K,V>     ← Concrete hash map
+```
+
+
+## Core Interface: `IEnumerable<T>`
+
+
+The interface only has **one method**:
+
+```csharp
+public interface IEnumerable<T>
+{
+    IEnumerator<T> GetEnumerator();
+}
+```
+
+This is what enables the `foreach` loop:
+
+```csharp
+IEnumerable<int> numbers = new List<int> { 1, 2, 3, 4, 5 };
+
+foreach (int num in numbers)  // ← IEnumerable enables this
+{
+    Console.WriteLine(num);
+}
+```
+
+
+## Comparing to Dart
+
+
+Since you know Dart, here's a direct comparison:
+
+```dart
+// Dart
+Iterable<int> numbers = [1, 2, 3, 4, 5];
+for (var num in numbers) {
+  print(num);
+}
+```
+
+```csharp
+// C# - Almost identical!
+IEnumerable<int> numbers = new List<int> { 1, 2, 3, 4, 5 };
+foreach (var num in numbers) 
+{
+    Console.WriteLine(num);
+}
+```
+
+
+## Why Use IEnumerable?
+
+
+**1. Flexibility** - Accept any collection type:
+
+```csharp
+// This method works with List, Array, HashSet, etc.
+void PrintItems(IEnumerable<string> items)
+{
+    foreach (var item in items)
+    {
+        Console.WriteLine(item);
+    }
+}
+
+// All of these work:
+PrintItems(new List<string> { "A", "B" });
+PrintItems(new string[] { "X", "Y" });
+PrintItems(new HashSet<string> { "M", "N" });
+```
+
+**2. LINQ Support** - All LINQ methods work on `IEnumerable<T>`:
+
+```csharp
+IEnumerable<int> numbers = new List<int> { 1, 2, 3, 4, 5 };
+
+var evenNumbers = numbers.Where(n => n % 2 == 0);  // Like Dart's .where()
+var doubled = numbers.Select(n => n * 2);          // Like Dart's .map()
+```
+
+
+## Key Characteristics
+
+
+**Lazy Evaluation** - Similar to Dart's `Iterable`:
+
+```csharp
+IEnumerable<int> numbers = GetNumbers(); // Not executed yet
+var filtered = numbers.Where(n => n > 10); // Still not executed!
+var result = filtered.ToList(); // ← NOW it executes
+```
+
+**Forward-Only** - Can only iterate once in a streaming fashion:
+
+```csharp
+IEnumerable<int> numbers = ReadFromFile(); // Imagine this streams data
+
+foreach (var num in numbers) { } // First iteration - OK
+foreach (var num in numbers) { } // Second iteration - might fail or restart
+```
+
+
+## When You See IEnumerable in Code
+
+
+```csharp
+// Return type - means "I return a sequence"
+public IEnumerable<User> GetActiveUsers()
+{
+    return users.Where(u => u.IsActive);
+}
+
+// Parameter type - means "I accept any collection"
+public void ProcessItems(IEnumerable<Item> items)
+{
+    // Process items...
+}
+```
+
+
+## Quick Practice
+
+
+Try this on your Mac:
+
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+var fruits = new List<string> { "apple", "banana", "cherry", "date" };
+
+// IEnumerable from LINQ query
+IEnumerable<string> longFruits = fruits.Where(f => f.Length > 5);
+
+foreach (var fruit in longFruits)
+{
+    Console.WriteLine(fruit);
+}
+```
