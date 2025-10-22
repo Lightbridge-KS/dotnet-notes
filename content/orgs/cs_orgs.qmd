@@ -1,0 +1,224 @@
+# .NET Code Organization
+
+
+::: {.callout-note appearance="default" collapse="false"}
+In Python, I can progressively create Python code which can build up to modules and Python packages. 
+
+I can create a top level Python script that use this local Python package or I can create a CLI script on top that use this local Python package.  Or even, I can build and publish this package to Pypi or GitHub. 
+
+I'm wondering if C# and .NET ecosystem has some kind of these things?
+:::
+
+
+Yes! C# and .NET have excellent equivalents to Python's module/package system:
+
+```
+Python                    →    C# / .NET
+─────────────────────────────────────────────
+.py file (module)        →    .cs file (class file)
+package (folder)         →    namespace/project
+local package            →    Class Library (DLL)
+top-level script         →    Console Application
+PyPI                     →    NuGet
+pip install              →    dotnet add package
+CLI tool                 →    .NET Tool
+```
+
+
+## Project Structure Comparison
+
+
+Here's how a typical C# solution compares to Python:
+
+```
+Python Project                 C# Solution
+──────────────                 ───────────
+my_project/                    MySolution/
+├── my_package/                ├── MySolution.sln
+│   ├── __init__.py            ├── MyLibrary/
+│   ├── module1.py             │   ├── MyLibrary.csproj
+│   └── module2.py             │   ├── Class1.cs
+├── scripts/                   │   └── Class2.cs
+│   └── main.py                └── MyConsoleApp/
+├── setup.py                       ├── MyConsoleApp.csproj
+└── requirements.txt               └── Program.cs
+```
+
+
+## Building Blocks in C#
+
+
+### 1. **Class Library** (Your Reusable Package)
+
+
+This is like a Python package you can import:
+
+```bash
+# Create a class library
+dotnet new classlib -n MyAwesomeLibrary
+```
+
+### 2. **Console Application** (Your Executable)
+
+
+This is like your Python script that uses the library:
+
+```bash
+# Create a console app
+dotnet new console -n MyApp
+```
+
+### 3. **Solution** (Container for Multiple Projects)
+
+
+This groups related projects together:
+
+```bash
+# Create a solution
+dotnet new sln -n MySolution
+
+# Add projects to solution
+dotnet sln add MyAwesomeLibrary/MyAwesomeLibrary.csproj
+dotnet sln add MyApp/MyApp.csproj
+```
+
+### 4. **Reference Local Projects**
+
+
+Like importing a local Python package:
+
+```bash
+# In MyApp, reference MyAwesomeLibrary
+cd MyApp
+dotnet add reference ../MyAwesomeLibrary/MyAwesomeLibrary.csproj
+```
+
+
+## Publishing and Distribution
+
+
+```
+Distribution Method           C# Equivalent
+───────────────────────────────────────────
+Local package                Project reference
+GitHub release               GitHub + NuGet package
+PyPI                        NuGet.org
+pip install my-package      dotnet add package MyPackage
+python -m my_tool           dotnet tool install -g mytool
+```
+
+
+## Practical Example
+
+
+Let me show you a complete workflow:
+
+- **Example repo:** [MathToolsDotNet](https://github.com/Lightbridge-KS/MathToolsDotNet)
+
+### Step 1: Create a Library
+
+
+```bash
+# Create solution and library
+dotnet new sln -n MathTools
+dotnet new classlib -n MathTools.Core
+dotnet sln add MathTools.Core/MathTools.Core.csproj
+```
+
+```csharp
+// MathTools.Core/Calculator.cs
+namespace MathTools.Core
+{
+    public class Calculator
+    {
+        public int Add(int a, int b) => a + b;
+        public int Multiply(int a, int b) => a * b;
+    }
+}
+```
+
+### Step 2: Create Console App Using the Library
+
+
+```bash
+dotnet new console -n MathTools.CLI
+dotnet sln add MathTools.CLI/MathTools.CLI.csproj
+cd MathTools.CLI
+dotnet add reference ../MathTools.Core/MathTools.Core.csproj
+```
+
+```csharp
+// MathTools.CLI/Program.cs
+using MathTools.Core;
+
+var calc = new Calculator();
+Console.WriteLine($"5 + 3 = {calc.Add(5, 3)}");
+Console.WriteLine($"4 × 7 = {calc.Multiply(4, 7)}");
+```
+
+### Step 3: Build and Run
+
+
+```bash
+dotnet build
+dotnet run --project MathTools.CLI
+```
+
+
+## Publishing Options
+
+
+### 1. **NuGet Package** (Like PyPI)
+
+
+```bash
+# Pack your library
+cd MathTools.Core
+dotnet pack -c Release
+
+# Push to NuGet.org (need API key)
+dotnet nuget push bin/Release/MathTools.Core.1.0.0.nupkg \
+    --api-key YOUR_API_KEY \
+    --source https://api.nuget.org/v3/index.json
+```
+
+### 2. **Global Tool** (Like pip install with CLI)
+
+
+```xml
+<!-- Add to .csproj for CLI tool -->
+<PropertyGroup>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>mathtool</ToolCommandName>
+</PropertyGroup>
+```
+
+```bash
+# Install globally
+dotnet tool install -g MathTools.CLI
+
+# Run from anywhere
+mathtool
+```
+
+### 3. **GitHub Packages**
+
+
+You can also publish to GitHub Packages Registry, similar to how you might use GitHub for Python packages.
+
+
+## Key Differences from Python
+
+
+1. **Compilation**: C# compiles to DLLs (Dynamic Link Libraries), not interpreted
+2. **Strong Typing**: Everything has explicit types (though `var` provides type inference)
+3. **Project Files**: `.csproj` files manage dependencies (like `requirements.txt` + `setup.py`)
+4. **Namespaces**: More explicit than Python's module system
+
+
+Since you're on macOS with .NET 9, I suggest:
+
+1. Start with a simple class library + console app combo
+2. Practice referencing projects
+3. Try publishing a simple package to NuGet
+4. Create a global tool for command-line usage

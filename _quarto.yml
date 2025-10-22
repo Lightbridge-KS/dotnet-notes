@@ -19,9 +19,12 @@ book:
         - "content/basic/cs_iteration.qmd"
         - "content/basic/cs_attributes.qmd"
         - "content/basic/cs_linq.qmd"
-        - "content/orgs/cs_code-organization.qmd"
         - "content/orgs/cs_program.qmd"
         - "content/basic/cs_code_docs.qmd"
+    - part: Organization
+      chapters: 
+        - "content/orgs/cs_orgs.qmd"
+        - "content/orgs/cs_code-organization.qmd"
     - part: Data, Types, Interface
       chapters: 
         - "content/basic/cs_datatypes.qmd"
