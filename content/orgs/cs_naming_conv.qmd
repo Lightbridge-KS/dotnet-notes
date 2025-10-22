@@ -1,0 +1,352 @@
+# Naming Conventions Guide
+
+Let me provide you with comprehensive naming conventions that follow Microsoft's official guidelines and industry best practices.
+
+## Project & Solution Naming
+
+
+### Solution Names
+```
+CompanyName.ProductName
+CompanyName.ProductName.All
+CompanyName.ProductName.Solution
+
+Examples:
+Microsoft.AspNetCore
+Lightbridge.MedicalImaging
+RadAI.DicomProcessor
+```
+
+
+### Class Library Names
+```
+CompanyName.ProductName.Component
+CompanyName.ProductName.Layer
+
+Examples:
+RadAI.Imaging.Core
+RadAI.Imaging.Utilities  
+RadAI.Imaging.DataAccess
+Microsoft.Extensions.Logging
+```
+
+
+### Console Application Names
+```
+CompanyName.ProductName.CLI
+CompanyName.ProductName.Console
+CompanyName.ProductName.Tool
+
+Examples:
+RadAI.DicomViewer.CLI
+RadAI.ImageProcessor.Console
+Microsoft.DotNet.Tools.Restore
+```
+
+
+### Web API Names
+```
+CompanyName.ProductName.Api
+CompanyName.ProductName.WebApi
+CompanyName.ProductName.Service
+
+Examples:
+RadAI.PatientRecords.Api
+RadAI.Imaging.WebApi
+Microsoft.AspNetCore.Server.Kestrel
+```
+
+
+## File Structure & Naming
+
+
+### Directory Structure
+```
+RadAI.MedicalImaging/                 # Solution folder
+├── RadAI.MedicalImaging.sln         # Solution file
+├── src/                              # Source code
+│   ├── RadAI.MedicalImaging.Core/   # Core library
+│   │   ├── Models/                  # Models folder
+│   │   ├── Services/                # Services folder
+│   │   ├── Interfaces/              # Interfaces folder
+│   │   └── Utilities/               # Utilities folder
+│   ├── RadAI.MedicalImaging.Api/    # Web API
+│   └── RadAI.MedicalImaging.CLI/    # Console app
+├── tests/                            # Test projects
+│   ├── RadAI.MedicalImaging.Core.Tests/
+│   └── RadAI.MedicalImaging.Api.Tests/
+└── docs/                             # Documentation
+```
+
+
+### File Naming Rules
+```csharp
+// One class per file, file name = class name
+Patient.cs           → public class Patient
+IPatientService.cs   → public interface IPatientService  
+PatientService.cs    → public class PatientService
+PatientDto.cs        → public class PatientDto
+PatientValidator.cs  → public class PatientValidator
+
+// Partial classes
+Patient.cs           → public partial class Patient
+Patient.Generated.cs → public partial class Patient
+
+// Nested classes (avoid if possible)
+Order.cs            → Contains Order + Order.OrderItem
+```
+
+
+## Object Naming Conventions
+
+
+### Classes and Structs
+```csharp
+// PascalCase, noun or noun phrases
+public class Patient { }
+public class DicomImageReader { }
+public struct Point3D { }
+public record PatientRecord { }
+
+// Avoid abbreviations (except well-known)
+public class HtmlParser { }     // OK - HTML is well-known
+public class JsonConverter { }  // OK - JSON is well-known
+public class PatientMgr { }     // BAD - use PatientManager
+```
+
+
+### Interfaces
+```csharp
+// PascalCase with 'I' prefix
+public interface IPatientRepository { }
+public interface IImageProcessor { }
+public interface IDisposable { }
+public interface ILogger<T> { }
+```
+
+
+### Methods
+```csharp
+public class PatientService
+{
+    // PascalCase, verb or verb phrases
+    public Patient GetPatient(int id) { }
+    public void SavePatient(Patient patient) { }
+    public async Task<bool> ValidateImageAsync(byte[] data) { }
+    public bool IsValid() { }
+    public bool HasPermission() { }
+    
+    // Async methods end with 'Async'
+    public async Task<Patient> GetPatientAsync(int id) { }
+    public async Task SavePatientAsync(Patient patient) { }
+}
+```
+
+
+### Properties
+```csharp
+public class Patient
+{
+    // PascalCase, noun or adjective
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+    public int Age { get; set; }
+    public bool IsActive { get; set; }
+    public DateTime DateOfBirth { get; set; }
+    
+    // Boolean properties often start with Is, Has, Can
+    public bool IsValid { get; }
+    public bool HasInsurance { get; }
+    public bool CanEdit { get; }
+}
+```
+
+
+### Variables and Parameters
+```csharp
+public class ImageProcessor
+{
+    // Private fields: camelCase with underscore prefix
+    private readonly ILogger _logger;
+    private int _processedCount;
+    private static readonly string _defaultFormat = "DICOM";
+    
+    // Local variables: camelCase
+    public void ProcessImage(byte[] imageData)
+    {
+        int width = 1920;
+        string fileName = "scan.dcm";
+        var imageInfo = new ImageInfo();
+        
+        // Loop variables
+        for (int i = 0; i < 10; i++) { }
+        foreach (var item in items) { }
+    }
+    
+    // Method parameters: camelCase
+    public void SaveImage(string fileName, byte[] imageData, bool compress)
+    {
+        // ...
+    }
+}
+```
+
+
+### Constants and Enums
+```csharp
+public class MedicalConstants
+{
+    // Constants: PascalCase
+    public const string DefaultModality = "CT";
+    public const int MaxImageSize = 1024;
+    
+    // Static readonly: PascalCase
+    public static readonly DateTime MinDate = new(1900, 1, 1);
+}
+
+// Enums: PascalCase (both enum and values)
+public enum Modality
+{
+    CT,
+    MRI,
+    XRay,
+    Ultrasound,
+    PetScan     // No hyphens, use PascalCase
+}
+
+// Flags enum
+[Flags]
+public enum Permissions
+{
+    None = 0,
+    Read = 1,
+    Write = 2,
+    Delete = 4,
+    All = Read | Write | Delete
+}
+```
+
+
+### Events and Delegates
+```csharp
+// Events: PascalCase
+public event EventHandler ImageProcessed;
+public event EventHandler<PatientEventArgs> PatientUpdated;
+
+// Delegates: PascalCase, end with Handler/Callback
+public delegate void ImageProcessedHandler(object sender, EventArgs e);
+public delegate Task AsyncCallback(string message);
+```
+
+
+### Generics
+```csharp
+// Single letter T for simple cases
+public class List<T> { }
+public interface IRepository<T> where T : class { }
+
+// Descriptive names for multiple type parameters
+public class Dictionary<TKey, TValue> { }
+public interface IConverter<TSource, TDestination> { }
+```
+
+
+## Special Cases & Patterns
+
+
+### DTOs and ViewModels
+```csharp
+// Data Transfer Objects
+public class PatientDto { }
+public class PatientCreateDto { }
+public class PatientUpdateDto { }
+
+// ViewModels (for MVC/MVVM)
+public class PatientViewModel { }
+public class PatientListViewModel { }
+```
+
+
+### Test Classes
+```csharp
+// Test class = ClassNameTests or ClassNameTest
+public class PatientServiceTests { }
+public class ImageProcessorTests { }
+
+// Test methods describe what they test
+[Test]
+public void GetPatient_WithValidId_ReturnsPatient() { }
+
+[Test]
+public async Task SavePatientAsync_WithNullPatient_ThrowsException() { }
+```
+
+
+### Namespaces
+```csharp
+// Match folder structure, PascalCase
+namespace RadAI.MedicalImaging.Core.Models;
+namespace RadAI.MedicalImaging.Core.Services;
+namespace RadAI.MedicalImaging.Api.Controllers;
+```
+
+
+## Quick Reference Card
+
+
+```
+Type                Example
+─────────────────────────────────────────
+Solution:           CompanyName.ProductName
+Project:            CompanyName.ProductName.Component
+Namespace:          CompanyName.ProductName.Component
+Class:              PatientRecord (PascalCase)
+Interface:          IPatientService (I + PascalCase)
+Method:             GetPatient() (PascalCase)
+Async Method:       GetPatientAsync() (PascalCase + Async)
+Property:           FirstName (PascalCase)
+Private Field:      _firstName (underscore + camelCase)
+Local Variable:     firstName (camelCase)
+Parameter:          firstName (camelCase)
+Constant:           MaxRetryCount (PascalCase)
+Enum Type:          PatientStatus (PascalCase)
+Enum Value:         Active, Inactive (PascalCase)
+Event:              DataReceived (PascalCase)
+Generic Type:       T, TKey, TValue
+```
+
+
+## Common Mistakes to Avoid
+
+
+```csharp
+// ❌ BAD Examples
+public class patient { }           // Should be PascalCase
+public interface PatientService {} // Missing 'I' prefix
+private string FirstName;          // Should have underscore
+public void get_patient() { }      // Should be PascalCase, not snake_case
+public async Task<Patient> GetPatient() { } // Missing Async suffix
+
+// ✅ GOOD Examples
+public class Patient { }
+public interface IPatientService { }
+private string _firstName;
+public void GetPatient() { }
+public async Task<Patient> GetPatientAsync() { }
+```
+
+
+## Dart vs C# Comparison
+
+
+```
+Dart                          C#
+────────────────────────────────────────
+class PatientService          class PatientService
+mixin ImageProcessor          interface IImageProcessor
+getPatient()                  GetPatient()
+_privateField                 _privateField
+final String name             public string Name { get; }
+var items = []                var items = new List<T>()
+snake_case files              PascalCase.cs files
+```

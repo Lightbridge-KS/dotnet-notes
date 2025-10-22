@@ -25,6 +25,7 @@ book:
       chapters: 
         - "content/orgs/cs_orgs.qmd"
         - "content/orgs/cs_code-organization.qmd"
+        - "content/orgs/cs_naming_conv.qmd"
     - part: Data, Types, Interface
       chapters: 
         - "content/basic/cs_datatypes.qmd"
