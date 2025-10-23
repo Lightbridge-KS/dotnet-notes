@@ -1,0 +1,318 @@
+# JSON Serialization and Deserialization
+
+Great to meet you! Let's dive into JSON handling in C#. Since you're familiar with Python, this will feel somewhat similar but with C#'s strongly-typed nature.
+
+## Overview
+
+
+Here's the conceptual flow:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    SERIALIZATION                            │
+│                                                             │
+│   C# Object  ────────────────────►  JSON String             │
+│   (in memory)                        (text format)          │
+│                                                             │
+│   Patient                            {                      │
+│   {                                    "Name": "John",      │
+│     Name = "John",      ════►          "Age": 45,           │
+│     Age = 45,                          "StudyDate": "..."   │
+│     StudyDate = ...                  }                      │
+│   }                                                         │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│                   DESERIALIZATION                           │
+│                                                             │
+│   JSON String  ──────────────────►  C# Object               │
+│   (text format)                      (in memory)            │
+│                                                             │
+│   {                                  Patient                │
+│     "Name": "John",                  {                      │
+│     "Age": 45,          ════►          Name = "John",       │
+│     "StudyDate": "..."                 Age = 45,            │
+│   }                                    StudyDate = ...      │
+│                                      }                      │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Two Main Libraries
+
+
+In .NET, you have two main options:
+
+1. **System.Text.Json** (Modern, built-in, recommended for .NET Core 3.0+)
+2. **Newtonsoft.Json (Json.NET)** (Older, feature-rich, widely used)
+
+Since you have .NET 9, we'll focus on **System.Text.Json** as it's the modern standard.
+
+## Basic Example - System.Text.Json
+
+
+Let me create a practical example related to radiology:Let me run this example for you:I see that .NET SDK isn't available in this environment, but let me explain what this code does and what you'd see when you run it:
+
+## Key Concepts Explained
+
+
+### 1. **Basic Serialization**
+
+
+```csharp
+// Object to JSON string
+string jsonString = JsonSerializer.Serialize(study);
+```
+
+**Output (compact):**
+```json
+{"PatientId":"RAD-12345","PatientName":"John Doe","Age":45,"Modality":"CT","StudyDate":"2025-10-23T10:30:00","BodyPart":"Chest","Findings":["No acute findings","Normal cardiac silhouette","Clear lung fields"]}
+```
+
+### 2. **Pretty Printing**
+
+
+```csharp
+var options = new JsonSerializerOptions { WriteIndented = true };
+string jsonPretty = JsonSerializer.Serialize(study, options);
+```
+
+**Output (formatted):**
+```json
+{
+  "PatientId": "RAD-12345",
+  "PatientName": "John Doe",
+  "Age": 45,
+  "Modality": "CT",
+  "StudyDate": "2025-10-23T10:30:00",
+  "BodyPart": "Chest",
+  "Findings": [
+    "No acute findings",
+    "Normal cardiac silhouette",
+    "Clear lung fields"
+  ]
+}
+```
+
+### 3. **Basic Deserialization**
+
+
+```csharp
+// JSON string to Object
+RadiologyStudy study = JsonSerializer.Deserialize<RadiologyStudy>(jsonInput);
+```
+
+## Important Attributes
+
+
+Here are common JSON attributes you'll use:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Attribute              Purpose                         │
+├─────────────────────────────────────────────────────────┤
+│  [JsonIgnore]          Skip this property               │
+│  [JsonPropertyName]    Custom JSON property name        │
+│  [JsonInclude]         Include private/internal props   │
+│  [JsonConverter]       Custom conversion logic          │
+└─────────────────────────────────────────────────────────┘
+```
+
+## Advanced Example with Customization
+## Common JsonSerializerOptions
+
+
+Here's a quick reference of useful options:
+
+```csharp
+var options = new JsonSerializerOptions
+{
+    WriteIndented = true,                    // Pretty print
+    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,  // camelCase
+    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,  // Ignore nulls
+    PropertyNameCaseInsensitive = true,      // Case-insensitive deserialization
+    AllowTrailingCommas = true,              // Permit trailing commas
+    ReadCommentHandling = JsonCommentHandling.Skip,  // Skip // or /* */ comments
+    NumberHandling = JsonNumberHandling.AllowReadingFromString  // "123" → 123
+};
+```
+
+## Naming Policies Comparison
+
+
+```
+C# Property          │  Default      │  CamelCase     │  snake_case (custom)
+─────────────────────┼───────────────┼────────────────┼────────────────────
+PatientName          │  PatientName  │  patientName   │  patient_name
+StudyInstanceUID     │  StudyInstanceUID │ studyInstanceUID │ study_instance_uid
+Age                  │  Age          │  age           │  age
+```
+
+## Comparison with Python
+
+
+Since you know Python, here's a side-by-side comparison:
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│  Operation     │  Python (json)       │  C# (System.Text.Json) │
+├────────────────────────────────────────────────────────────────┤
+│  Serialize     │  json.dumps(obj)     │  JsonSerializer.       │
+│                │                      │    Serialize(obj)      │
+│                │                      │                        │
+│  Deserialize   │  json.loads(str)     │  JsonSerializer.       │
+│                │                      │    Deserialize<T>(str) │
+│                │                      │                        │
+│  To File       │  json.dump(obj, f)   │  File.WriteAllText()   │
+│                │                      │    + Serialize()       │
+│                │                      │                        │
+│  From File     │  json.load(f)        │  File.ReadAllText()    │
+│                │                      │    + Deserialize()     │
+│                │                      │                        │
+│  Pretty Print  │  indent=4            │  WriteIndented = true  │
+└────────────────────────────────────────────────────────────────┘
+```
+
+**Key Difference:** C# requires specifying the type `<T>` during deserialization, while Python returns a dictionary by default.
+
+## Practical Example: Working with AI Model Results
+
+
+Let me create an example relevant to your radiology AI work:## Quick Reference Cheat Sheet
+
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  SERIALIZATION (Object → JSON)                                   │
+├──────────────────────────────────────────────────────────────────┤
+│  Basic:                                                          │
+│    string json = JsonSerializer.Serialize(obj);                  │
+│                                                                  │
+│  With Options:                                                   │
+│    var options = new JsonSerializerOptions                       │
+│    {                                                             │
+│        WriteIndented = true,                                     │
+│        PropertyNamingPolicy = JsonNamingPolicy.CamelCase         │
+│    };                                                            │
+│    string json = JsonSerializer.Serialize(obj, options);         │
+│                                                                  │
+│  To File:                                                        │
+│    File.WriteAllText("data.json", json);                         │
+│    // or async                                                   │
+│    await File.WriteAllTextAsync("data.json", json);              │
+└──────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────┐
+│  DESERIALIZATION (JSON → Object)                                 │
+├──────────────────────────────────────────────────────────────────┤
+│  Basic:                                                          │
+│    var obj = JsonSerializer.Deserialize<MyClass>(jsonString);    │
+│                                                                  │
+│  With Options:                                                   │
+│    var obj = JsonSerializer.Deserialize<MyClass>(                │
+│        jsonString, options);                                     │
+│                                                                  │
+│  From File:                                                      │
+│    string json = File.ReadAllText("data.json");                  │
+│    var obj = JsonSerializer.Deserialize<MyClass>(json);          │
+│    // or async                                                   │
+│    string json = await File.ReadAllTextAsync("data.json");       │
+│                                                                  │
+│  List/Array:                                                     │
+│    var list = JsonSerializer.Deserialize<List<MyClass>>(json);   │
+│    var array = JsonSerializer.Deserialize<MyClass[]>(json);      │
+│                                                                  │
+│  Dictionary:                                                     │
+│    var dict = JsonSerializer.Deserialize<                        │
+│        Dictionary<string, MyClass>>(json);                       │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+## Common Patterns in Data Science Workflows
+## Common Pitfalls and Best Practices
+## Alternative: Newtonsoft.Json (Json.NET)
+
+
+While **System.Text.Json** is the modern standard, **Newtonsoft.Json** is still widely used. Here's a comparison:
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│  Feature               │ System.Text.Json   │ Newtonsoft.Json      │
+├────────────────────────────────────────────────────────────────────┤
+│  Performance           │ ✓ Faster           │ Slower               │
+│  Memory usage          │ ✓ Lower            │ Higher               │
+│  Built-in (.NET 3.0+)  │ ✓ Yes              │ No (NuGet package)   │
+│  Feature richness      │ Good               │ ✓ Very comprehensive │
+│  Dynamic JSON          │ JsonDocument       │ ✓ JObject (easier)   │
+│  LINQ to JSON          │ No                 │ ✓ Yes                │
+│  Default behavior      │ Strict             │ ✓ More lenient       │
+│  Community adoption    │ Growing            │ ✓ Mature, widespread │
+└────────────────────────────────────────────────────────────────────┘
+```
+
+### Newtonsoft.Json Quick Example:
+
+
+```csharp
+// Install: dotnet add package Newtonsoft.Json
+
+using Newtonsoft.Json;
+
+// Serialize
+string json = JsonConvert.SerializeObject(obj, Formatting.Indented);
+
+// Deserialize
+var obj = JsonConvert.DeserializeObject<MyClass>(json);
+
+// Dynamic JSON with JObject
+var jObject = JObject.Parse(json);
+string name = jObject["patient_name"].ToString();
+```
+
+**When to use Newtonsoft.Json:**
+- Legacy projects already using it
+- Need LINQ to JSON features
+- Working with very dynamic/flexible JSON
+- Need specific features not in System.Text.Json
+
+**When to use System.Text.Json:**
+- New projects (recommended)
+- Performance is critical
+- Want built-in support
+- AOT compilation scenarios
+
+
+## Final Tips
+
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  💡 Pro Tips for C# JSON in Data Science                    │
+├─────────────────────────────────────────────────────────────┤
+│  1. Use DTOs (Data Transfer Objects) - separate classes     │
+│     for API/file I/O vs internal business logic             │
+│                                                             │
+│  2. Leverage async/await for file I/O:                      │
+│     await File.WriteAllTextAsync(...)                       │
+│     await File.ReadAllTextAsync(...)                        │
+│                                                             │
+│  3. For large datasets, consider streaming APIs             │
+│     (Utf8JsonReader/Writer) instead of loading all          │
+│                                                             │
+│  4. Use records for immutable data:                         │
+│     public record Patient(string Id, string Name);          │
+│                                                             │
+│  5. Combine with LINQ for powerful data manipulation:       │
+│     var highConf = predictions                              │
+│         .Where(p => p.Confidence > 0.9)                     │
+│         .ToList();                                          │
+│                                                             │
+│  6. Consider System.Text.Json.Nodes for truly dynamic JSON  │
+│                                                             │
+│  7. Use [Required] attribute (.NET 7+) for mandatory fields │
+└─────────────────────────────────────────────────────────────┘
+```
+
+
+

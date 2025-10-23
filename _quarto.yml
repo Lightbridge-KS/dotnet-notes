@@ -37,6 +37,9 @@ book:
         - "content/oop/cs_record.qmd"
         - "content/oop/cs_methods.qmd"
         - "content/oop/cs_methods_overloading.qmd"
+    - part: Data Conversion
+      chapters: 
+        - "content/conversion/cs_json.qmd"
     - part: CLI
       chapters: 
         - "content/basic/cs_cli-args.qmd"
