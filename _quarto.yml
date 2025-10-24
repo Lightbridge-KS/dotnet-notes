@@ -40,6 +40,9 @@ book:
     - part: Data Conversion
       chapters: 
         - "content/conversion/cs_json.qmd"
+    - part: Validation
+      chapters: 
+        - "content/validate/record_validation.qmd"
     - part: CLI
       chapters: 
         - "content/basic/cs_cli-args.qmd"

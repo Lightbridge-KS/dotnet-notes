@@ -1,0 +1,414 @@
+# `record` data validation
+
+Data validation in C# `record` types is an important topic. Let me walk you through your options, from simple to advanced.
+
+
+## Overview of Validation Approaches
+
+
+```
+┌─────────────────────────────────────────────────────────┐
+│           Record Validation Strategies                  │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  1. Constructor Validation (Primary Constructor)        │
+│     ├─ Validate in constructor body                     │
+│     └─ Throw exceptions for invalid data                │
+│                                                         │
+│  2. Property Init Validation                            │
+│     ├─ Validate in init accessors                       │
+│     └─ Control during object initialization             │
+│                                                         │
+│  3. Data Annotations                                    │
+│     ├─ Declarative attributes                           │
+│     └─ Framework integration (ASP.NET, EF Core)         │
+│                                                         │
+│  4. FluentValidation Library                            │
+│     ├─ Separate validation rules                        │
+│     └─ Complex scenarios                                │
+│                                                         │
+│  5. Factory Methods / Smart Constructors                │
+│     ├─ Return Result<T> or validation result            │
+│     └─ Avoid exceptions for business logic              │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+
+## Constructor Validation (Simplest Approach)
+
+
+Validate directly in the primary constructor - similar to how you'd do it in Dart or Python class constructors:
+
+```csharp
+// Basic validation in primary constructor
+public record Patient(string Name, int Age, string HospitalNumber)
+{
+    public Patient(string Name, int Age, string HospitalNumber) : this(Name, Age, HospitalNumber)
+    {
+        // Validate Name
+        if (string.IsNullOrWhiteSpace(Name))
+            throw new ArgumentException("Patient name cannot be empty", nameof(Name));
+        
+        // Validate Age
+        if (Age < 0 || Age > 150)
+            throw new ArgumentOutOfRangeException(nameof(Age), "Age must be between 0 and 150");
+        
+        // Validate Hospital Number format
+        if (string.IsNullOrWhiteSpace(HospitalNumber) || HospitalNumber.Length < 6)
+            throw new ArgumentException("Invalid hospital number format", nameof(HospitalNumber));
+    }
+}
+
+// Usage
+try
+{
+    var patient = new Patient("John Doe", 45, "RM123456");
+    var invalidPatient = new Patient("", -5, "123"); // Throws exception
+}
+catch (ArgumentException ex)
+{
+    Console.WriteLine($"Validation failed: {ex.Message}");
+}
+```
+
+
+## Property Init Validation
+
+
+For records with explicit properties, you can validate in `init` accessors:
+
+```csharp
+public record DicomStudy
+{
+    private string _studyInstanceUID;
+    private DateTime _studyDate;
+    
+    public string StudyInstanceUID
+    {
+        get => _studyInstanceUID;
+        init
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                throw new ArgumentException("StudyInstanceUID cannot be empty");
+            
+            // Validate DICOM UID format (simplified)
+            if (!value.Contains('.'))
+                throw new ArgumentException("Invalid DICOM UID format");
+            
+            _studyInstanceUID = value;
+        }
+    }
+    
+    public DateTime StudyDate
+    {
+        get => _studyDate;
+        init
+        {
+            if (value > DateTime.Now)
+                throw new ArgumentException("Study date cannot be in the future");
+            
+            if (value < new DateTime(1900, 1, 1))
+                throw new ArgumentException("Study date is too old");
+            
+            _studyInstanceUID = value;
+        }
+    }
+    
+    public string Modality { get; init; }
+}
+
+// Usage
+var study = new DicomStudy
+{
+    StudyInstanceUID = "1.2.840.113619.2.55.3.123456",
+    StudyDate = DateTime.Now.AddDays(-1),
+    Modality = "CT"
+};
+```
+
+
+## Data Annotations (Declarative Validation)
+
+
+Use attributes from `System.ComponentModel.DataAnnotations` - very useful for ASP.NET Core APIs:
+
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+public record RadiologyReport
+{
+    [Required(ErrorMessage = "Accession number is required")]
+    [StringLength(20, MinimumLength = 6, ErrorMessage = "Accession number must be 6-20 characters")]
+    public string AccessionNumber { get; init; }
+    
+    [Required]
+    [Range(1, 100, ErrorMessage = "Patient age must be between 1 and 100")]
+    public int PatientAge { get; init; }
+    
+    [Required]
+    [RegularExpression(@"^[A-Z]{2}\d{6}$", ErrorMessage = "Invalid HN format (expected: XX123456)")]
+    public string HN { get; init; }
+    
+    [EmailAddress(ErrorMessage = "Invalid email format")]
+    public string? RadiologistEmail { get; init; }
+    
+    [StringLength(5000, ErrorMessage = "Report findings cannot exceed 5000 characters")]
+    public string Findings { get; init; }
+}
+
+// You need to manually validate (or use ASP.NET which does it automatically)
+using System.ComponentModel.DataAnnotations;
+
+public static class RecordValidator
+{
+    public static (bool IsValid, List<string> Errors) Validate<T>(T record)
+    {
+        var context = new ValidationContext(record);
+        var results = new List<ValidationResult>();
+        
+        bool isValid = Validator.TryValidateObject(record, context, results, validateAllProperties: true);
+        
+        var errors = results.Select(r => r.ErrorMessage ?? "Unknown error").ToList();
+        return (isValid, errors);
+    }
+}
+
+// Usage
+var report = new RadiologyReport
+{
+    AccessionNumber = "RM12",  // Too short
+    PatientAge = 150,  // Out of range
+    HN = "invalid",    // Wrong format
+    Findings = "Normal chest X-ray"
+};
+
+var (isValid, errors) = RecordValidator.Validate(report);
+if (!isValid)
+{
+    Console.WriteLine("Validation errors:");
+    errors.ForEach(e => Console.WriteLine($"  - {e}"));
+}
+```
+
+
+## FluentValidation Library (Advanced)
+
+
+For complex validation scenarios, use FluentValidation (needs NuGet package):
+
+```bash
+dotnet add package FluentValidation
+```
+
+```csharp
+using FluentValidation;
+
+public record ImagingOrder
+{
+    public string OrderId { get; init; }
+    public string PatientHN { get; init; }
+    public string Modality { get; init; }
+    public string BodyPart { get; init; }
+    public DateTime OrderedDate { get; init; }
+    public bool IsUrgent { get; init; }
+}
+
+public class ImagingOrderValidator : AbstractValidator<ImagingOrder>
+{
+    public ImagingOrderValidator()
+    {
+        RuleFor(x => x.OrderId)
+            .NotEmpty()
+            .Length(8, 15)
+            .WithMessage("Order ID must be 8-15 characters");
+        
+        RuleFor(x => x.PatientHN)
+            .NotEmpty()
+            .Matches(@"^[A-Z]{2}\d{6}$")
+            .WithMessage("Invalid HN format");
+        
+        RuleFor(x => x.Modality)
+            .Must(m => new[] { "CT", "MRI", "XR", "US", "NM" }.Contains(m))
+            .WithMessage("Invalid modality");
+        
+        RuleFor(x => x.OrderedDate)
+            .LessThanOrEqualTo(DateTime.Now)
+            .WithMessage("Order date cannot be in the future");
+        
+        // Conditional validation
+        When(x => x.IsUrgent, () =>
+        {
+            RuleFor(x => x.OrderedDate)
+                .Must(date => (DateTime.Now - date).TotalHours <= 24)
+                .WithMessage("Urgent orders must be placed within 24 hours");
+        });
+        
+        // Complex cross-property validation
+        RuleFor(x => x.BodyPart)
+            .NotEmpty()
+            .Must((order, bodyPart) => ValidateModalityBodyPartCombination(order.Modality, bodyPart))
+            .WithMessage("Invalid modality-body part combination");
+    }
+    
+    private bool ValidateModalityBodyPartCombination(string modality, string bodyPart)
+    {
+        // Custom business logic
+        if (modality == "NM" && bodyPart == "Chest")
+            return false; // Example: Nuclear Medicine typically doesn't scan chest alone
+        return true;
+    }
+}
+
+// Usage
+var order = new ImagingOrder
+{
+    OrderId = "ORD123456",
+    PatientHN = "RM123456",
+    Modality = "CT",
+    BodyPart = "Chest",
+    OrderedDate = DateTime.Now.AddDays(-1),
+    IsUrgent = false
+};
+
+var validator = new ImagingOrderValidator();
+var validationResult = validator.Validate(order);
+
+if (!validationResult.IsValid)
+{
+    foreach (var error in validationResult.Errors)
+    {
+        Console.WriteLine($"Property: {error.PropertyName}");
+        Console.WriteLine($"Error: {error.ErrorMessage}");
+    }
+}
+```
+
+
+## Factory Pattern with Result Type (Production Recommendation)
+
+
+Instead of throwing exceptions, return validation results - better for business logic:
+
+```csharp
+// Result type for validation
+public record ValidationResult
+{
+    public bool IsSuccess { get; init; }
+    public List<string> Errors { get; init; } = new();
+    
+    public static ValidationResult Success() => new() { IsSuccess = true };
+    public static ValidationResult Failure(params string[] errors) => 
+        new() { IsSuccess = false, Errors = errors.ToList() };
+}
+
+public record Result<T>
+{
+    public bool IsSuccess { get; init; }
+    public T? Value { get; init; }
+    public List<string> Errors { get; init; } = new();
+    
+    public static Result<T> Success(T value) => 
+        new() { IsSuccess = true, Value = value };
+    
+    public static Result<T> Failure(params string[] errors) => 
+        new() { IsSuccess = false, Errors = errors.ToList() };
+}
+
+// Record with private constructor + factory method
+public record DicomImage
+{
+    public string SopInstanceUID { get; init; }
+    public int Rows { get; init; }
+    public int Columns { get; init; }
+    public string TransferSyntax { get; init; }
+    
+    // Private constructor - force use of factory method
+    private DicomImage() { }
+    
+    // Factory method with validation
+    public static Result<DicomImage> Create(
+        string sopInstanceUID,
+        int rows,
+        int columns,
+        string transferSyntax)
+    {
+        var errors = new List<string>();
+        
+        if (string.IsNullOrWhiteSpace(sopInstanceUID))
+            errors.Add("SOP Instance UID cannot be empty");
+        
+        if (rows <= 0 || rows > 10000)
+            errors.Add("Rows must be between 1 and 10000");
+        
+        if (columns <= 0 || columns > 10000)
+            errors.Add("Columns must be between 1 and 10000");
+        
+        if (string.IsNullOrWhiteSpace(transferSyntax))
+            errors.Add("Transfer syntax cannot be empty");
+        
+        if (errors.Any())
+            return Result<DicomImage>.Failure(errors.ToArray());
+        
+        return Result<DicomImage>.Success(new DicomImage
+        {
+            SopInstanceUID = sopInstanceUID,
+            Rows = rows,
+            Columns = columns,
+            TransferSyntax = transferSyntax
+        });
+    }
+}
+
+// Usage - no exceptions!
+var result = DicomImage.Create(
+    sopInstanceUID: "1.2.840.113619.2.55.3.123456.789",
+    rows: 512,
+    columns: 512,
+    transferSyntax: "1.2.840.10008.1.2.1"
+);
+
+if (result.IsSuccess)
+{
+    var image = result.Value;
+    Console.WriteLine($"Created DICOM image: {image.Rows}x{image.Columns}");
+}
+else
+{
+    Console.WriteLine("Validation failed:");
+    result.Errors.ForEach(e => Console.WriteLine($"  - {e}"));
+}
+```
+
+
+## Comparison: When to Use Each Approach
+
+
+```
+┌────────────────────┬──────────────┬────────────────┬─────────────────┐
+│ Approach           │ Complexity   │ Best For       │ Exception-based │
+├────────────────────┼──────────────┼────────────────┼─────────────────┤
+│ Constructor        │ Low          │ Simple types   │ Yes             │
+│ Validation         │              │ Quick checks   │                 │
+├────────────────────┼──────────────┼────────────────┼─────────────────┤
+│ Init Accessors     │ Medium       │ Per-property   │ Yes             │
+│                    │              │ validation     │                 │
+├────────────────────┼──────────────┼────────────────┼─────────────────┤
+│ Data Annotations   │ Low-Medium   │ ASP.NET apps   │ No (manual)     │
+│                    │              │ DTOs, Models   │                 │
+├────────────────────┼──────────────┼────────────────┼─────────────────┤
+│ FluentValidation   │ High         │ Complex rules  │ No              │
+│                    │              │ Reusable logic │                 │
+├────────────────────┼──────────────┼────────────────┼─────────────────┤
+│ Factory Pattern    │ Medium-High  │ Domain models  │ No              │
+│                    │              │ Business logic │                 │
+└────────────────────┴──────────────┴────────────────┴─────────────────┘
+```
+
+
+
+For your radiology/DICOM work, I'd suggest a **hybrid approach**:
+
+1. **Simple records** (DTOs, API models): Use **Data Annotations**
+2. **Domain models** (core business objects): Use **Factory Pattern with Result type**
+3. **Complex validation**: Consider **FluentValidation**
