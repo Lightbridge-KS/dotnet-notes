@@ -1,0 +1,353 @@
+# DataAnnotations — Validate
+
+::: {.callout-note appearance="default" collapse="false"}
+**Q:** Can `DataAnnotations` actually throw error (e.g. in IDE, compile time, run time)?
+:::
+
+The short answer is: **DataAnnotations do NOT throw errors automatically** - they're just metadata. Let me explain when they actually work:
+
+
+## How DataAnnotations Actually Work
+
+
+```
+┌─────────────────────────────────────────────────────────┐
+│         DataAnnotations Validation Flow                 │
+├─────────────────────────────────────────────────────────┤
+│                                                           │
+│  Compile Time:   ✗ NO validation                        │
+│  IDE:            ✗ NO warnings (by default)             │
+│  Object Creation: ✗ NO automatic validation             │
+│                                                           │
+│  Runtime:        ✓ Only when explicitly validated       │
+│                  ✓ Or when framework validates          │
+│                                                           │
+└─────────────────────────────────────────────────────────┘
+```
+
+
+## Example: DataAnnotations DON'T Throw Automatically
+
+
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+public record Patient
+{
+    [Required]
+    [StringLength(10, MinimumLength = 3)]
+    public string Name { get; init; }
+    
+    [Range(0, 150)]
+    public int Age { get; init; }
+}
+
+// This compiles fine - NO errors!
+var patient1 = new Patient { Name = "", Age = -5 };  // Invalid but NO exception
+
+// This also works - NO errors!
+var patient2 = new Patient { Name = "ThisNameIsWayTooLongAndExceedsTenCharacters", Age = 200 };
+
+// Nothing happens - the object is created with invalid data
+Console.WriteLine($"Patient created: {patient1.Name}, Age: {patient1.Age}");
+// Output: Patient created: , Age: -5
+```
+
+**No compile error, no IDE warning, no runtime exception!** The attributes are just sitting there doing nothing.
+
+
+## When DO They Throw/Validate?
+
+
+### Option 1: Manual Validation (YOU must call it)
+
+
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+var patient = new Patient { Name = "", Age = -5 };
+
+// Manual validation
+var context = new ValidationContext(patient);
+var results = new List<ValidationResult>();
+
+bool isValid = Validator.TryValidateObject(
+    patient, 
+    context, 
+    results, 
+    validateAllProperties: true  // Important! Validates all properties
+);
+
+if (!isValid)
+{
+    Console.WriteLine("Validation errors:");
+    foreach (var error in results)
+    {
+        Console.WriteLine($"  - {error.ErrorMessage}");
+    }
+}
+
+// Output:
+// Validation errors:
+//   - The Name field is required.
+//   - The field Age must be between 0 and 150.
+```
+
+
+### Option 2: ASP.NET Core Automatically Validates
+
+
+When you use DataAnnotations in ASP.NET Core API controllers, the framework validates automatically:
+
+```csharp
+using Microsoft.AspNetCore.Mvc;
+
+// API Controller
+[ApiController]
+[Route("api/[controller]")]
+public class PatientsController : ControllerBase
+{
+    [HttpPost]
+    public IActionResult CreatePatient([FromBody] Patient patient)
+    {
+        // ASP.NET Core AUTOMATICALLY validates patient here
+        // If invalid, returns 400 Bad Request with error details
+        // You don't reach this code if validation fails!
+        
+        return Ok(patient);
+    }
+}
+
+// Request with invalid data:
+// POST /api/patients
+// { "name": "", "age": -5 }
+
+// Response (automatic 400 error):
+// {
+//   "type": "https://tools.ietf.org/html/rfc7231#section-6.5.1",
+//   "title": "One or more validation errors occurred.",
+//   "status": 400,
+//   "errors": {
+//     "Name": ["The Name field is required."],
+//     "Age": ["The field Age must be between 0 and 150."]
+//   }
+// }
+```
+
+
+### Option 3: Entity Framework Core Validates
+
+
+EF Core validates DataAnnotations when you try to save to database:
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+
+public class HospitalDbContext : DbContext
+{
+    public DbSet<Patient> Patients { get; set; }
+}
+
+// This will throw exception when SaveChanges is called
+var patient = new Patient { Name = "", Age = -5 };
+
+var db = new HospitalDbContext();
+db.Patients.Add(patient);
+
+// ❌ THROWS ValidationException here!
+await db.SaveChangesAsync();  
+// Exception: One or more validation errors occurred
+```
+
+
+## Complete Example: All Scenarios
+
+
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+public record DicomStudy
+{
+    [Required(ErrorMessage = "Study Instance UID is required")]
+    [RegularExpression(@"^[\d.]+$", ErrorMessage = "Invalid UID format")]
+    public string StudyInstanceUID { get; init; }
+    
+    [Required]
+    [StringLength(16, ErrorMessage = "Accession number too long")]
+    public string AccessionNumber { get; init; }
+    
+    [Range(1, 1000, ErrorMessage = "Image count must be 1-1000")]
+    public int ImageCount { get; init; }
+}
+
+// ─────────────────────────────────────────────
+// Scenario 1: Just creating object - NO validation
+// ─────────────────────────────────────────────
+var study1 = new DicomStudy
+{
+    StudyInstanceUID = "invalid!@#",  // Wrong format
+    AccessionNumber = "ThisIsWayTooLongForAccessionNumber",  // Too long
+    ImageCount = 5000  // Out of range
+};
+Console.WriteLine("Study1 created - no errors!"); // This runs fine!
+
+
+// ─────────────────────────────────────────────
+// Scenario 2: Manual validation - DOES validate
+// ─────────────────────────────────────────────
+var study2 = new DicomStudy
+{
+    StudyInstanceUID = "1.2.840.113619.2.55",
+    AccessionNumber = "ACC12345",
+    ImageCount = 100
+};
+
+var context = new ValidationContext(study2);
+var results = new List<ValidationResult>();
+
+if (!Validator.TryValidateObject(study2, context, results, true))
+{
+    Console.WriteLine("Validation failed!");
+    results.ForEach(r => Console.WriteLine($"  - {r.ErrorMessage}"));
+}
+else
+{
+    Console.WriteLine("Study2 is valid!");
+}
+
+
+// ─────────────────────────────────────────────
+// Scenario 3: Throw exception on validation failure
+// ─────────────────────────────────────────────
+var study3 = new DicomStudy
+{
+    StudyInstanceUID = "",  // Invalid
+    AccessionNumber = "ACC123",
+    ImageCount = 50
+};
+
+try
+{
+    // ValidateObject throws exception if invalid
+    Validator.ValidateObject(study3, new ValidationContext(study3), true);
+    Console.WriteLine("Study3 is valid");
+}
+catch (ValidationException ex)
+{
+    Console.WriteLine($"❌ Validation exception: {ex.Message}");
+    // Output: ❌ Validation exception: Study Instance UID is required
+}
+```
+
+
+## Comparison Table
+
+
+```
+┌────────────────────────┬──────────────┬──────────────────────┐
+│ Context                │ Auto Validate│ Manual Code Needed   │
+├────────────────────────┼──────────────┼──────────────────────┤
+│ Creating object        │ ✗ No         │ N/A - Never validates│
+│ (new Patient {...})    │              │                      │
+├────────────────────────┼──────────────┼──────────────────────┤
+│ Manual validation      │ ✗ No         │ ✓ Call Validator     │
+│                        │              │   TryValidateObject  │
+├────────────────────────┼──────────────┼──────────────────────┤
+│ ASP.NET Core           │ ✓ Yes        │ ✗ Automatic (with    │
+│ [ApiController]        │              │   [ApiController])   │
+├────────────────────────┼──────────────┼──────────────────────┤
+│ ASP.NET MVC            │ ✓ Yes        │ ✗ Check ModelState   │
+│                        │              │   in controller      │
+├────────────────────────┼──────────────┼──────────────────────┤
+│ Entity Framework Core  │ ✓ Yes        │ ✗ Validates on       │
+│ SaveChanges()          │              │   SaveChanges()      │
+├────────────────────────┼──────────────┼──────────────────────┤
+│ Blazor forms           │ ✓ Yes        │ ✗ With DataAnnotations│
+│                        │              │   Validator component│
+└────────────────────────┴──────────────┴──────────────────────┘
+```
+
+
+## Helper Class for Manual Validation
+
+
+Here's a utility class you can use to easily validate any object with DataAnnotations:
+
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+public static class DataAnnotationValidator
+{
+    /// <summary>
+    /// Validates an object and returns whether it's valid
+    /// </summary>
+    public static (bool IsValid, List<string> Errors) Validate<T>(T obj)
+    {
+        var context = new ValidationContext(obj);
+        var results = new List<ValidationResult>();
+        
+        bool isValid = Validator.TryValidateObject(obj, context, results, validateAllProperties: true);
+        
+        var errors = results.Select(r => r.ErrorMessage ?? "Unknown error").ToList();
+        return (isValid, errors);
+    }
+    
+    /// <summary>
+    /// Validates and throws exception if invalid
+    /// </summary>
+    public static void ValidateAndThrow<T>(T obj)
+    {
+        var context = new ValidationContext(obj);
+        Validator.ValidateObject(obj, context, validateAllProperties: true);
+    }
+    
+    /// <summary>
+    /// Validates and returns detailed results
+    /// </summary>
+    public static List<ValidationResult> ValidateDetailed<T>(T obj)
+    {
+        var context = new ValidationContext(obj);
+        var results = new List<ValidationResult>();
+        Validator.TryValidateObject(obj, context, results, validateAllProperties: true);
+        return results;
+    }
+}
+
+// Usage examples:
+var study = new DicomStudy { /* ... */ };
+
+// Option 1: Check if valid
+var (isValid, errors) = DataAnnotationValidator.Validate(study);
+if (!isValid)
+{
+    errors.ForEach(Console.WriteLine);
+}
+
+// Option 2: Throw exception if invalid
+try
+{
+    DataAnnotationValidator.ValidateAndThrow(study);
+}
+catch (ValidationException ex)
+{
+    Console.WriteLine($"Invalid: {ex.Message}");
+}
+
+// Option 3: Get detailed results
+var validationResults = DataAnnotationValidator.ValidateDetailed(study);
+foreach (var result in validationResults)
+{
+    Console.WriteLine($"Property: {string.Join(", ", result.MemberNames)}");
+    Console.WriteLine($"Error: {result.ErrorMessage}");
+}
+```
+
+
+## Key Takeaways
+
+
+1. **DataAnnotations are passive metadata** - they don't do anything by themselves
+2. **No compile-time or IDE errors** (unless you use special analyzers)
+3. **You must explicitly validate** OR **use a framework that validates for you**
+4. **Best for ASP.NET Core APIs** where validation is automatic
+5. **For domain models**, consider constructor validation or factory patterns instead

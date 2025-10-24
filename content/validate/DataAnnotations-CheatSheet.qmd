@@ -1,0 +1,613 @@
+# DataAnnotations Validation Cheat Sheet
+
+
+## Overview of All Validation Attributes
+
+
+```
+┌───────────────────────────────────────────────────────────────┐
+│              DataAnnotations Categories                       │
+├───────────────────────────────────────────────────────────────┤
+│                                                               │
+│  1. Required/Optional      [Required], [AllowNull]            │
+│  2. String Validation      [StringLength], [RegularExpression]│
+│  3. Numeric Validation     [Range], [Phone], [CreditCard]     │
+│  4. Comparison Validation  [Compare]                          │
+│  5. Data Type Validation   [EmailAddress], [Url], [DataType]  │
+│  6. Custom Validation      [CustomValidation], IValidatable   │
+│                                                               │
+└───────────────────────────────────────────────────────────────┘
+```
+
+
+## Required/Optional Validation
+
+
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+public record Patient
+{
+    // ────────────────────────────────────────
+    // [Required] - Value must not be null
+    // ────────────────────────────────────────
+    [Required]
+    public string HospitalNumber { get; init; }
+    
+    [Required(ErrorMessage = "Patient name is required")]
+    public string Name { get; init; }
+    
+    [Required(AllowEmptyStrings = false)]  // Also rejects empty strings
+    public string AccessionNumber { get; init; }
+    
+    
+    // ────────────────────────────────────────
+    // Nullable properties (no [Required])
+    // ────────────────────────────────────────
+    public string? MiddleName { get; init; }  // Optional
+    public int? ReferringPhysicianId { get; init; }  // Optional
+}
+```
+
+
+## String Validation
+
+
+```csharp
+public record DicomStudy
+{
+    // ────────────────────────────────────────
+    // [StringLength] - Min/Max length
+    // ────────────────────────────────────────
+    [StringLength(100)]  // Max 100 characters
+    public string PatientName { get; init; }
+    
+    [StringLength(64, MinimumLength = 16)]  // Between 16-64 chars
+    public string StudyInstanceUID { get; init; }
+    
+    [StringLength(20, MinimumLength = 6, 
+        ErrorMessage = "Accession number must be 6-20 characters")]
+    public string AccessionNumber { get; init; }
+    
+    
+    // ────────────────────────────────────────
+    // [MinLength] / [MaxLength] - Alternative
+    // ────────────────────────────────────────
+    [MinLength(3)]
+    public string Modality { get; init; }
+    
+    [MaxLength(500)]
+    public string StudyDescription { get; init; }
+    
+    
+    // ────────────────────────────────────────
+    // [RegularExpression] - Pattern matching
+    // ────────────────────────────────────────
+    [RegularExpression(@"^[0-9.]+$", 
+        ErrorMessage = "UID must contain only digits and dots")]
+    public string SopInstanceUID { get; init; }
+    
+    [RegularExpression(@"^[A-Z]{2}\d{6}$",
+        ErrorMessage = "HN format: XX123456")]
+    public string HN { get; init; }
+    
+    [RegularExpression(@"^(CT|MR|XR|US|NM|PT|MG)$",
+        ErrorMessage = "Invalid modality code")]
+    public string ModalityCode { get; init; }
+    
+    // DICOM Date format: YYYYMMDD
+    [RegularExpression(@"^\d{8}$",
+        ErrorMessage = "Date must be in YYYYMMDD format")]
+    public string StudyDate { get; init; }
+    
+    // DICOM Time format: HHMMSS
+    [RegularExpression(@"^\d{6}$",
+        ErrorMessage = "Time must be in HHMMSS format")]
+    public string StudyTime { get; init; }
+}
+```
+
+
+## Numeric Validation
+
+
+```csharp
+public record ImagingParameters
+{
+    // ────────────────────────────────────────
+    // [Range] - Min/Max values
+    // ────────────────────────────────────────
+    [Range(0, 150)]  // Age between 0-150
+    public int PatientAge { get; init; }
+    
+    [Range(1, 10000)]  // Image dimensions
+    public int Rows { get; init; }
+    
+    [Range(0.0, 1000.0)]  // Radiation dose (mGy)
+    public double ExposureDose { get; init; }
+    
+    [Range(typeof(decimal), "0.01", "999999.99")]  // For decimal
+    public decimal ExaminationFee { get; init; }
+    
+    
+    // ────────────────────────────────────────
+    // [Phone] - Phone number format
+    // ────────────────────────────────────────
+    [Phone]
+    public string? ContactNumber { get; init; }
+    
+    [Phone(ErrorMessage = "Invalid phone number")]
+    public string? EmergencyContact { get; init; }
+    
+    
+    // ────────────────────────────────────────
+    // [CreditCard] - Credit card validation
+    // ────────────────────────────────────────
+    [CreditCard]
+    public string? PaymentCard { get; init; }
+}
+```
+
+
+## Comparison Validation
+
+
+```csharp
+public record UserRegistration
+{
+    // ────────────────────────────────────────
+    // [Compare] - Must match another property
+    // ────────────────────────────────────────
+    [Required]
+    [StringLength(100, MinimumLength = 8)]
+    public string Password { get; init; }
+    
+    [Compare("Password", ErrorMessage = "Passwords don't match")]
+    public string ConfirmPassword { get; init; }
+    
+    [EmailAddress]
+    public string Email { get; init; }
+    
+    [Compare("Email", ErrorMessage = "Email addresses don't match")]
+    public string ConfirmEmail { get; init; }
+}
+
+public record AppointmentSchedule
+{
+    [Required]
+    public DateTime StartTime { get; init; }
+    
+    // EndTime must equal StartTime (could use custom validation instead)
+    [Compare("StartTime")]  
+    public DateTime EndTime { get; init; }
+}
+```
+
+
+## Data Type & Format Validation
+
+
+```csharp
+public record ContactInformation
+{
+    // ────────────────────────────────────────
+    // [EmailAddress] - Email format
+    // ────────────────────────────────────────
+    [EmailAddress]
+    public string? Email { get; init; }
+    
+    [EmailAddress(ErrorMessage = "Invalid email format")]
+    public string? AlternateEmail { get; init; }
+    
+    
+    // ────────────────────────────────────────
+    // [Url] - URL format
+    // ────────────────────────────────────────
+    [Url]
+    public string? WebsiteUrl { get; init; }
+    
+    [Url(ErrorMessage = "Invalid PACS URL")]
+    public string? PacsServerUrl { get; init; }
+    
+    
+    // ────────────────────────────────────────
+    // [DataType] - Semantic hints (no validation)
+    // ────────────────────────────────────────
+    [DataType(DataType.Date)]
+    public DateTime BirthDate { get; init; }
+    
+    [DataType(DataType.Time)]
+    public TimeSpan AppointmentTime { get; init; }
+    
+    [DataType(DataType.Password)]
+    public string Password { get; init; }
+    
+    [DataType(DataType.MultilineText)]
+    public string ClinicalHistory { get; init; }
+    
+    [DataType(DataType.Currency)]
+    public decimal Fee { get; init; }
+    
+    [DataType(DataType.PhoneNumber)]
+    public string Phone { get; init; }
+}
+```
+
+
+## Collection Validation
+
+
+```csharp
+public record ImagingOrder
+{
+    // ────────────────────────────────────────
+    // [MinLength] / [MaxLength] - For collections
+    // ────────────────────────────────────────
+    [MinLength(1, ErrorMessage = "At least one image required")]
+    [MaxLength(100, ErrorMessage = "Maximum 100 images per study")]
+    public List<string> ImageIds { get; init; }
+    
+    [Required]
+    [MinLength(1)]
+    public List<string> Modalities { get; init; }
+}
+```
+
+
+## Custom Validation
+
+
+### Option A: [CustomValidation] Attribute
+
+
+```csharp
+public record DicomImage
+{
+    [Required]
+    public string SopInstanceUID { get; init; }
+    
+    [Range(1, 10000)]
+    public int Rows { get; init; }
+    
+    [Range(1, 10000)]
+    public int Columns { get; init; }
+    
+    // Custom validation method
+    [CustomValidation(typeof(DicomImage), nameof(ValidateImageSize))]
+    public int ImageSize => Rows * Columns;
+    
+    public static ValidationResult? ValidateImageSize(int size, ValidationContext context)
+    {
+        // Maximum 100 megapixels
+        if (size > 100_000_000)
+        {
+            return new ValidationResult(
+                "Image size exceeds 100 megapixels",
+                new[] { context.MemberName }
+            );
+        }
+        
+        return ValidationResult.Success;
+    }
+}
+```
+
+
+### Option B: IValidatableObject Interface
+
+
+```csharp
+public record RadiologyReport : IValidatableObject
+{
+    [Required]
+    public string AccessionNumber { get; init; }
+    
+    [Required]
+    public DateTime StudyDate { get; init; }
+    
+    [Required]
+    public DateTime ReportDate { get; init; }
+    
+    public bool IsUrgent { get; init; }
+    
+    [StringLength(5000)]
+    public string Findings { get; init; }
+    
+    // Complex cross-property validation
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        // Report date cannot be before study date
+        if (ReportDate < StudyDate)
+        {
+            yield return new ValidationResult(
+                "Report date cannot be before study date",
+                new[] { nameof(ReportDate) }
+            );
+        }
+        
+        // Urgent reports must be completed within 24 hours
+        if (IsUrgent && (ReportDate - StudyDate).TotalHours > 24)
+        {
+            yield return new ValidationResult(
+                "Urgent reports must be completed within 24 hours",
+                new[] { nameof(IsUrgent), nameof(ReportDate) }
+            );
+        }
+        
+        // Findings required for urgent reports
+        if (IsUrgent && string.IsNullOrWhiteSpace(Findings))
+        {
+            yield return new ValidationResult(
+                "Findings are required for urgent reports",
+                new[] { nameof(Findings) }
+            );
+        }
+    }
+}
+```
+
+
+### Option C: Custom Validation Attribute
+
+
+```csharp
+// Create your own attribute
+public class DicomUidAttribute : ValidationAttribute
+{
+    protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
+    {
+        if (value is not string uid)
+            return new ValidationResult("UID must be a string");
+        
+        if (string.IsNullOrWhiteSpace(uid))
+            return new ValidationResult("UID cannot be empty");
+        
+        // DICOM UID format: digits and dots only, max 64 chars
+        if (!System.Text.RegularExpressions.Regex.IsMatch(uid, @"^[0-9.]+$"))
+            return new ValidationResult("UID must contain only digits and dots");
+        
+        if (uid.Length > 64)
+            return new ValidationResult("UID cannot exceed 64 characters");
+        
+        // Cannot start or end with dot
+        if (uid.StartsWith('.') || uid.EndsWith('.'))
+            return new ValidationResult("UID cannot start or end with a dot");
+        
+        return ValidationResult.Success;
+    }
+}
+
+// Usage
+public record DicomSeries
+{
+    [DicomUid]
+    public string SeriesInstanceUID { get; init; }
+    
+    [DicomUid]
+    public string StudyInstanceUID { get; init; }
+}
+```
+
+
+## Complete Reference Table
+
+
+```
+┌──────────────────────────┬────────────────────────────────────────┐
+│ Attribute                │ Purpose                                │
+├──────────────────────────┼────────────────────────────────────────┤
+│ [Required]               │ Value must not be null                 │
+│ [StringLength(max)]      │ String max length                      │
+│ [StringLength(max, Min)] │ String length range                    │
+│ [MinLength(n)]           │ Min length (string or collection)      │
+│ [MaxLength(n)]           │ Max length (string or collection)      │
+│ [Range(min, max)]        │ Numeric range validation               │
+│ [RegularExpression]      │ Pattern matching                       │
+│ [Compare("Property")]    │ Must match another property            │
+│ [EmailAddress]           │ Valid email format                     │
+│ [Phone]                  │ Valid phone format                     │
+│ [Url]                    │ Valid URL format                       │
+│ [CreditCard]             │ Valid credit card number               │
+│ [DataType]               │ Semantic hint (no validation)          │
+│ [CustomValidation]       │ Custom validation method               │
+│ IValidatableObject       │ Complex object-level validation        │
+│ ValidationAttribute      │ Create custom attribute                │
+└──────────────────────────┴────────────────────────────────────────┘
+```
+
+
+## Display & Formatting Attributes (Not Validation)
+
+
+These don't validate but are useful for UI and metadata:
+
+```csharp
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+
+public record PatientRecord
+{
+    // ────────────────────────────────────────
+    // [Display] - UI display metadata
+    // ────────────────────────────────────────
+    [Display(Name = "Hospital Number")]
+    public string HN { get; init; }
+    
+    [Display(Name = "Date of Birth", Order = 1)]
+    public DateTime DOB { get; init; }
+    
+    [Display(GroupName = "Contact Information")]
+    [Display(Prompt = "Enter email address")]
+    public string Email { get; init; }
+    
+    
+    // ────────────────────────────────────────
+    // [DisplayFormat] - Format hints
+    // ────────────────────────────────────────
+    [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}")]
+    public DateTime StudyDate { get; init; }
+    
+    [DisplayFormat(DataFormatString = "{0:C}", ApplyFormatInEditMode = true)]
+    public decimal Fee { get; init; }
+    
+    [DisplayFormat(NullDisplayText = "Not specified")]
+    public string? MiddleName { get; init; }
+    
+    
+    // ────────────────────────────────────────
+    // [Description] - Tooltip/help text
+    // ────────────────────────────────────────
+    [Description("Patient's unique hospital identifier")]
+    public string PatientId { get; init; }
+    
+    
+    // ────────────────────────────────────────
+    // [Editable] - UI editability hint
+    // ────────────────────────────────────────
+    [Editable(false)]
+    public string SystemGeneratedId { get; init; }
+    
+    
+    // ────────────────────────────────────────
+    // [ScaffoldColumn] - Hide from auto-generated UI
+    // ────────────────────────────────────────
+    [ScaffoldColumn(false)]
+    public string InternalNotes { get; init; }
+}
+```
+
+
+## Real-World Example: Complete DICOM Study Record
+
+
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+public record DicomStudyRequest : IValidatableObject
+{
+    // Basic required fields
+    [Required(ErrorMessage = "Study Instance UID is required")]
+    [RegularExpression(@"^[0-9.]+$", ErrorMessage = "Invalid UID format")]
+    [StringLength(64, ErrorMessage = "UID too long (max 64 chars)")]
+    public string StudyInstanceUID { get; init; }
+    
+    [Required]
+    [RegularExpression(@"^[A-Z]{2}\d{6}$", ErrorMessage = "HN format: XX123456")]
+    public string HN { get; init; }
+    
+    [Required]
+    [StringLength(100)]
+    public string PatientName { get; init; }
+    
+    [Range(0, 150, ErrorMessage = "Age must be 0-150")]
+    public int PatientAge { get; init; }
+    
+    // DICOM specific
+    [Required]
+    [RegularExpression(@"^(CT|MR|XR|US|NM|PT|MG|CR|DX)$")]
+    public string Modality { get; init; }
+    
+    [Required]
+    [RegularExpression(@"^\d{8}$", ErrorMessage = "Use YYYYMMDD format")]
+    public string StudyDate { get; init; }
+    
+    [RegularExpression(@"^\d{6}$", ErrorMessage = "Use HHMMSS format")]
+    public string? StudyTime { get; init; }
+    
+    [StringLength(16)]
+    public string AccessionNumber { get; init; }
+    
+    [StringLength(64)]
+    public string? StudyDescription { get; init; }
+    
+    // Technical parameters
+    [Range(1, 10000)]
+    public int? ImageRows { get; init; }
+    
+    [Range(1, 10000)]
+    public int? ImageColumns { get; init; }
+    
+    [Range(1, 10000)]
+    public int NumberOfImages { get; init; }
+    
+    // Contact info
+    [EmailAddress]
+    public string? RadiologistEmail { get; init; }
+    
+    [Url]
+    public string? PacsUrl { get; init; }
+    
+    // Complex validation
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        // Parse study date
+        if (DateTime.TryParseExact(StudyDate, "yyyyMMdd", null, 
+            System.Globalization.DateTimeStyles.None, out var date))
+        {
+            if (date > DateTime.Now)
+            {
+                yield return new ValidationResult(
+                    "Study date cannot be in the future",
+                    new[] { nameof(StudyDate) }
+                );
+            }
+        }
+        
+        // If dimensions provided, both must be present
+        if ((ImageRows.HasValue && !ImageColumns.HasValue) ||
+            (!ImageRows.HasValue && ImageColumns.HasValue))
+        {
+            yield return new ValidationResult(
+                "Both rows and columns must be specified if one is provided",
+                new[] { nameof(ImageRows), nameof(ImageColumns) }
+            );
+        }
+        
+        // Validate modality-specific rules
+        if (Modality == "CT" && NumberOfImages < 10)
+        {
+            yield return new ValidationResult(
+                "CT studies typically have at least 10 images",
+                new[] { nameof(NumberOfImages) }
+            );
+        }
+    }
+}
+```
+
+
+## Quick Reference Card
+
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║                  DATAANNOTATIONS QUICK REF                   ║
+╠══════════════════════════════════════════════════════════════╣
+║                                                              ║
+║  STRING                                                      ║
+║  ├─ [Required]                   Not null/empty              ║
+║  ├─ [StringLength(max, Min=n)]   Length range                ║
+║  └─ [RegularExpression(pattern)] Pattern match               ║
+║                                                              ║
+║  NUMERIC                                                     ║
+║  ├─ [Range(min, max)]            Value range                 ║
+║  ├─ [Phone]                      Phone format                ║
+║  └─ [CreditCard]                 Credit card                 ║
+║                                                              ║
+║  COMPARISON                                                  ║
+║  └─ [Compare("Property")]        Match another field         ║
+║                                                              ║
+║  FORMAT                                                      ║
+║  ├─ [EmailAddress]               Email format                ║
+║  └─ [Url]                        URL format                  ║
+║                                                              ║
+║  CUSTOM                                                      ║
+║  ├─ [CustomValidation]           Call custom method          ║
+║  ├─ IValidatableObject           Implement Validate()        ║
+║  └─ ValidationAttribute          Create custom attribute     ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
+```
+
+
+**Remember:** These attributes do nothing automatically - you must validate manually or use ASP.NET Core/EF Core!

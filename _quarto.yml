@@ -43,6 +43,8 @@ book:
     - part: Validation
       chapters: 
         - "content/validate/record_validation.qmd"
+        - "content/validate/DataAnnotations-CheatSheet.qmd"
+        - "content/validate/DataAnnotations-Validate.qmd"
     - part: CLI
       chapters: 
         - "content/basic/cs_cli-args.qmd"
