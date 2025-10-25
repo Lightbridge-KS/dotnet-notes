@@ -1,0 +1,779 @@
+# C# Classes Crash Course
+
+Let me walk you through C# classes with practical examples!
+
+## Basic Class Structure & Initialization
+
+
+A class is a blueprint for creating objects. Here's the fundamental structure:
+
+```csharp
+public class Person
+{
+    // Fields (private data)
+    private string name;
+    private int age;
+    
+    // Constructor
+    public Person(string name, int age)
+    {
+        this.name = name;
+        this.age = age;
+    }
+    
+    // Method
+    public void Introduce()
+    {
+        Console.WriteLine($"Hi, I'm {name} and I'm {age} years old.");
+    }
+}
+
+// Usage
+var person = new Person("Alice", 30);
+person.Introduce();
+// Output: Hi, I'm Alice and I'm 30 years old.
+```
+
+**Key Points:**
+- Fields store object data
+- Constructor initializes the object when created with `new`
+- `this` keyword refers to the current instance
+
+
+## Multiple Constructors
+
+
+C# supports constructor overloading - multiple constructors with different parameters:
+
+```csharp
+public class Book
+{
+    private string title;
+    private string author;
+    private int pages;
+    
+    // Constructor 1: All parameters
+    public Book(string title, string author, int pages)
+    {
+        this.title = title;
+        this.author = author;
+        this.pages = pages;
+    }
+    
+    // Constructor 2: Title and author only
+    public Book(string title, string author)
+    {
+        this.title = title;
+        this.author = author;
+        this.pages = 0; // Default value
+    }
+    
+    // Constructor 3: Title only
+    public Book(string title)
+    {
+        this.title = title;
+        this.author = "Unknown";
+        this.pages = 0;
+    }
+    
+    public void Display()
+    {
+        Console.WriteLine($"{title} by {author} ({pages} pages)");
+    }
+}
+
+// Usage
+var book1 = new Book("1984", "George Orwell", 328);
+var book2 = new Book("Animal Farm", "George Orwell");
+var book3 = new Book("Untitled");
+
+book1.Display(); // 1984 by George Orwell (328 pages)
+book2.Display(); // Animal Farm by George Orwell (0 pages)
+book3.Display(); // Untitled by Unknown (0 pages)
+```
+
+**Constructor Chaining:**
+
+You can call one constructor from another using `: this()`:
+
+```csharp
+public class Book
+{
+    private string title;
+    private string author;
+    private int pages;
+    
+    // Main constructor
+    public Book(string title, string author, int pages)
+    {
+        this.title = title;
+        this.author = author;
+        this.pages = pages;
+    }
+    
+    // Delegates to main constructor
+    public Book(string title, string author) : this(title, author, 0)
+    {
+    }
+    
+    // Delegates to previous constructor
+    public Book(string title) : this(title, "Unknown")
+    {
+    }
+}
+```
+
+
+## Instance vs Static Members
+
+
+```
+Instance Members              Static Members
+----------------              --------------
+   [Object 1]                    [Class]
+   - field1                   - staticField
+   - field2                   + StaticMethod()
+   + Method()                    (shared by all)
+                             
+   [Object 2]
+   - field1
+   - field2
+   + Method()
+
+Each object has              Belongs to the class
+its own copy                 itself, not instances
+```
+
+**Example:**
+
+```csharp
+public class Counter
+{
+    // Instance field - each object has its own
+    private int instanceCount;
+    
+    // Static field - shared across all instances
+    private static int totalCount = 0;
+    
+    // Constructor
+    public Counter()
+    {
+        instanceCount = 0;
+        totalCount++; // Increment shared counter
+    }
+    
+    // Instance method
+    public void Increment()
+    {
+        instanceCount++;
+    }
+    
+    // Instance method
+    public int GetInstanceCount()
+    {
+        return instanceCount;
+    }
+    
+    // Static method - can be called without creating an object
+    public static int GetTotalCount()
+    {
+        return totalCount;
+    }
+}
+
+// Usage
+var counter1 = new Counter();
+counter1.Increment();
+counter1.Increment();
+
+var counter2 = new Counter();
+counter2.Increment();
+
+Console.WriteLine($"Counter 1: {counter1.GetInstanceCount()}"); // 2
+Console.WriteLine($"Counter 2: {counter2.GetInstanceCount()}"); // 1
+Console.WriteLine($"Total counters: {Counter.GetTotalCount()}"); // 2
+```
+
+**Key Differences:**
+- **Instance members:** Accessed through object instances (`counter1.Increment()`)
+- **Static members:** Accessed through class name (`Counter.GetTotalCount()`)
+- Static members cannot access instance members directly
+
+
+## Access Modifiers
+
+
+Access modifiers control who can see and use your class members:
+
+```
++-----------+---------------+-----------+-----------+-----------+
+| Modifier  | Same Class    | Derived   | Same      | Different |
+|           |               | Class     | Assembly  | Assembly  |
++-----------+---------------+-----------+-----------+-----------+
+| public    |      ✓        |     ✓     |     ✓     |     ✓     |
+| protected |      ✓        |     ✓     |     ✗     |     ✗     |
+| internal  |      ✓        |     ✓     |     ✓     |     ✗     |
+| private   |      ✓        |     ✗     |     ✗     |     ✗     |
++-----------+---------------+-----------+-----------+-----------+
+```
+
+**Example:**
+
+```csharp
+public class BankAccount
+{
+    // Private: Only accessible within this class
+    private decimal balance;
+    
+    // Public: Accessible from anywhere
+    public string AccountNumber { get; set; }
+    
+    // Protected: Accessible in this class and derived classes
+    protected decimal interestRate;
+    
+    // Internal: Accessible within the same assembly
+    internal string BankCode { get; set; }
+    
+    public BankAccount(string accountNumber, decimal initialBalance)
+    {
+        AccountNumber = accountNumber;
+        balance = initialBalance;
+        interestRate = 0.02m;
+    }
+    
+    // Public method to access private field
+    public decimal GetBalance()
+    {
+        return balance;
+    }
+    
+    public void Deposit(decimal amount)
+    {
+        if (amount > 0)
+            balance += amount;
+    }
+}
+
+// Usage
+var account = new BankAccount("123456", 1000m);
+Console.WriteLine(account.AccountNumber); // ✓ OK - public
+// Console.WriteLine(account.balance);    // ✗ Error - private
+Console.WriteLine(account.GetBalance());  // ✓ OK - via public method
+```
+
+
+## Getters and Setters
+
+
+### Traditional Getter/Setter Methods
+
+
+```csharp
+public class Rectangle
+{
+    private double width;
+    private double height;
+    
+    // Getter
+    public double GetWidth()
+    {
+        return width;
+    }
+    
+    // Setter with validation
+    public void SetWidth(double value)
+    {
+        if (value > 0)
+            width = value;
+        else
+            throw new ArgumentException("Width must be positive");
+    }
+    
+    public double GetHeight()
+    {
+        return height;
+    }
+    
+    public void SetHeight(double value)
+    {
+        if (value > 0)
+            height = value;
+        else
+            throw new ArgumentException("Height must be positive");
+    }
+}
+```
+
+### Auto-Properties (Recommended)
+
+
+Modern C# way - compiler generates backing field automatically:
+
+```csharp
+public class Product
+{
+    // Auto-property (get and set)
+    public string Name { get; set; }
+    
+    // Auto-property with private setter
+    public decimal Price { get; private set; }
+    
+    // Auto-property with default value
+    public int Stock { get; set; } = 0;
+    
+    // Read-only auto-property (can only be set in constructor)
+    public string Id { get; }
+    
+    public Product(string id, string name, decimal price)
+    {
+        Id = id;  // OK - can set in constructor
+        Name = name;
+        Price = price;
+    }
+    
+    public void UpdatePrice(decimal newPrice)
+    {
+        if (newPrice > 0)
+            Price = newPrice;
+    }
+}
+
+// Usage
+var product = new Product("P001", "Laptop", 999.99m);
+product.Name = "Gaming Laptop";  // OK - public setter
+// product.Price = 800;          // Error - private setter
+product.UpdatePrice(899.99m);    // OK - via method
+```
+
+### Computed Properties (Expression-bodied)
+
+
+Properties that calculate values on-the-fly:
+
+```csharp
+public class Circle
+{
+    public double Radius { get; set; }
+    
+    // Computed property - no backing field
+    public double Diameter => Radius * 2;
+    
+    public double Area => Math.PI * Radius * Radius;
+    
+    public double Circumference => 2 * Math.PI * Radius;
+    
+    // Can also have logic in get block
+    public string Size
+    {
+        get
+        {
+            if (Radius < 5) return "Small";
+            if (Radius < 10) return "Medium";
+            return "Large";
+        }
+    }
+}
+
+// Usage
+var circle = new Circle { Radius = 5 };
+Console.WriteLine($"Radius: {circle.Radius}");
+Console.WriteLine($"Diameter: {circle.Diameter}");
+Console.WriteLine($"Area: {circle.Area:F2}");
+Console.WriteLine($"Size: {circle.Size}");
+```
+
+**Property Comparison:**
+
+```csharp
+public class Employee
+{
+    // Backing field
+    private string _fullName;
+    
+    // 1. Full property (manual control)
+    public string FullName
+    {
+        get { return _fullName; }
+        set { _fullName = value?.Trim(); }
+    }
+    
+    // 2. Auto-property (simple, no logic)
+    public string Email { get; set; }
+    
+    // 3. Computed property (read-only, calculated)
+    public string DisplayName => $"{FullName} ({Email})";
+    
+    // 4. Init-only property (set once during initialization)
+    public string EmployeeId { get; init; }
+}
+```
+
+
+## Inheritance
+
+
+```
+       [Animal]
+      /    |    \
+     /     |     \
+  [Dog] [Cat] [Bird]
+```
+
+Inheritance creates an "is-a" relationship:
+
+```csharp
+// Base class
+public class Animal
+{
+    public string Name { get; set; }
+    protected int age;
+    
+    public Animal(string name, int age)
+    {
+        Name = name;
+        this.age = age;
+    }
+    
+    // Virtual method - can be overridden
+    public virtual void MakeSound()
+    {
+        Console.WriteLine("Some generic animal sound");
+    }
+    
+    public void Sleep()
+    {
+        Console.WriteLine($"{Name} is sleeping...");
+    }
+}
+
+// Derived class
+public class Dog : Animal
+{
+    public string Breed { get; set; }
+    
+    // Call base constructor with : base()
+    public Dog(string name, int age, string breed) : base(name, age)
+    {
+        Breed = breed;
+    }
+    
+    // Override base method
+    public override void MakeSound()
+    {
+        Console.WriteLine($"{Name} says: Woof! Woof!");
+    }
+    
+    // New method specific to Dog
+    public void Fetch()
+    {
+        Console.WriteLine($"{Name} is fetching the ball!");
+    }
+}
+
+public class Cat : Animal
+{
+    public Cat(string name, int age) : base(name, age)
+    {
+    }
+    
+    public override void MakeSound()
+    {
+        Console.WriteLine($"{Name} says: Meow!");
+    }
+    
+    public void Scratch()
+    {
+        Console.WriteLine($"{Name} is scratching the furniture!");
+    }
+}
+
+// Usage
+Animal animal = new Animal("Generic", 5);
+Dog dog = new Dog("Buddy", 3, "Golden Retriever");
+Cat cat = new Cat("Whiskers", 2);
+
+animal.MakeSound(); // Some generic animal sound
+dog.MakeSound();    // Buddy says: Woof! Woof!
+cat.MakeSound();    // Whiskers says: Meow!
+
+dog.Fetch();        // Buddy is fetching the ball!
+cat.Scratch();      // Whiskers is scratching the furniture!
+
+// Polymorphism - treating derived classes as base class
+Animal[] animals = { animal, dog, cat };
+foreach (var a in animals)
+{
+    a.MakeSound();  // Calls appropriate overridden method
+    a.Sleep();      // Inherited method
+}
+```
+
+**Key Inheritance Keywords:**
+- `virtual`: Method can be overridden in derived classes
+- `override`: Overrides a virtual method from base class
+- `base`: Access base class members
+- `sealed`: Prevents further inheritance
+
+
+## Interfaces & Abstract Classes
+
+
+### Interfaces
+
+
+An interface is a contract - defines WHAT a class must do, not HOW:
+
+```csharp
+// Interface - only method signatures, no implementation
+public interface IPlayable
+{
+    void Play();
+    void Pause();
+    void Stop();
+}
+
+public interface IRecordable
+{
+    void StartRecording();
+    void StopRecording();
+}
+
+// Class can implement multiple interfaces
+public class MusicPlayer : IPlayable
+{
+    private bool isPlaying;
+    
+    public void Play()
+    {
+        isPlaying = true;
+        Console.WriteLine("Music is playing...");
+    }
+    
+    public void Pause()
+    {
+        Console.WriteLine("Music paused");
+    }
+    
+    public void Stop()
+    {
+        isPlaying = false;
+        Console.WriteLine("Music stopped");
+    }
+}
+
+// Implementing multiple interfaces
+public class VoiceRecorder : IPlayable, IRecordable
+{
+    public void Play()
+    {
+        Console.WriteLine("Playing recording...");
+    }
+    
+    public void Pause()
+    {
+        Console.WriteLine("Playback paused");
+    }
+    
+    public void Stop()
+    {
+        Console.WriteLine("Playback stopped");
+    }
+    
+    public void StartRecording()
+    {
+        Console.WriteLine("Recording started...");
+    }
+    
+    public void StopRecording()
+    {
+        Console.WriteLine("Recording stopped");
+    }
+}
+
+// Usage with polymorphism
+IPlayable player1 = new MusicPlayer();
+IPlayable player2 = new VoiceRecorder();
+
+player1.Play();
+player2.Play();
+```
+
+### Abstract Classes
+
+
+An abstract class is a partial implementation - defines both WHAT and some HOW:
+
+```csharp
+// Abstract class - cannot be instantiated directly
+public abstract class Shape
+{
+    // Normal property
+    public string Color { get; set; }
+    
+    // Abstract method - must be implemented by derived classes
+    public abstract double CalculateArea();
+    
+    // Abstract method
+    public abstract double CalculatePerimeter();
+    
+    // Concrete method - shared implementation
+    public void Display()
+    {
+        Console.WriteLine($"Shape: {GetType().Name}");
+        Console.WriteLine($"Color: {Color}");
+        Console.WriteLine($"Area: {CalculateArea():F2}");
+        Console.WriteLine($"Perimeter: {CalculatePerimeter():F2}");
+    }
+}
+
+public class Circle : Shape
+{
+    public double Radius { get; set; }
+    
+    public Circle(double radius, string color)
+    {
+        Radius = radius;
+        Color = color;
+    }
+    
+    public override double CalculateArea()
+    {
+        return Math.PI * Radius * Radius;
+    }
+    
+    public override double CalculatePerimeter()
+    {
+        return 2 * Math.PI * Radius;
+    }
+}
+
+public class Rectangle : Shape
+{
+    public double Width { get; set; }
+    public double Height { get; set; }
+    
+    public Rectangle(double width, double height, string color)
+    {
+        Width = width;
+        Height = height;
+        Color = color;
+    }
+    
+    public override double CalculateArea()
+    {
+        return Width * Height;
+    }
+    
+    public override double CalculatePerimeter()
+    {
+        return 2 * (Width + Height);
+    }
+}
+
+// Usage
+// Shape shape = new Shape(); // Error - cannot instantiate abstract class
+
+Shape circle = new Circle(5, "Red");
+Shape rectangle = new Rectangle(4, 6, "Blue");
+
+circle.Display();
+Console.WriteLine();
+rectangle.Display();
+```
+
+### When to Use What?
+
+
+```
+Interface                Abstract Class              Concrete Class
+---------                --------------              --------------
+- Pure contract          - Partial implementation    - Full implementation
+- No implementation      - Can have concrete         - No abstract members
+- Multiple inheritance   - Single inheritance        - Can be instantiated
+- "can do" relationship  - "is a" relationship       - Regular class
+
+Examples:                Examples:                   Examples:
+IPlayable                Shape                       Circle
+IComparable              Vehicle                     Rectangle
+IDisposable              Database                    SqlDatabase
+```
+
+**Example combining both:**
+
+```csharp
+// Interface
+public interface IVehicle
+{
+    void Start();
+    void Stop();
+}
+
+// Abstract class implementing interface
+public abstract class Vehicle : IVehicle
+{
+    public string Brand { get; set; }
+    public int Year { get; set; }
+    
+    // Abstract method
+    public abstract void Drive();
+    
+    // Interface implementation
+    public virtual void Start()
+    {
+        Console.WriteLine($"{Brand} starting...");
+    }
+    
+    public virtual void Stop()
+    {
+        Console.WriteLine($"{Brand} stopping...");
+    }
+}
+
+// Concrete class
+public class Car : Vehicle
+{
+    public int Doors { get; set; }
+    
+    public override void Drive()
+    {
+        Console.WriteLine($"{Brand} car is driving on the road");
+    }
+}
+
+public class Motorcycle : Vehicle
+{
+    public bool HasSidecar { get; set; }
+    
+    public override void Drive()
+    {
+        Console.WriteLine($"{Brand} motorcycle is cruising");
+    }
+    
+    // Override interface method with custom behavior
+    public override void Start()
+    {
+        Console.WriteLine($"{Brand} motorcycle: Vroom vroom!");
+    }
+}
+```
+
+
+## Quick Reference Table
+
+
+```
++------------------+------------------------------------------+
+| Feature          | Use Case                                  |
++------------------+------------------------------------------+
+| Instance         | Data unique to each object                |
+| Static           | Shared data/utility methods               |
+| public           | API, meant to be used everywhere          |
+| private          | Internal implementation details           |
+| protected        | For derived classes only                  |
+| Auto-property    | Simple get/set without logic              |
+| Computed         | Calculate value on-the-fly                |
+| Inheritance      | "is-a" relationship, code reuse           |
+| Interface        | Contract, multiple inheritance            |
+| Abstract         | Partial implementation, template          |
++------------------+------------------------------------------+
+```

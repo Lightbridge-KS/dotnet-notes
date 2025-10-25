@@ -34,6 +34,7 @@ book:
         - "content/datatypes/interface_IEnumerable.qmd"
     - part: OOP
       chapters: 
+        - "content/oop/cs_classes.qmd"
         - "content/oop/cs_type-inferred-object-creation.qmd"
         - "content/oop/cs_object_initialization.qmd"
         - "content/oop/cs_record.qmd"
@@ -50,7 +51,6 @@ book:
     - part: .NET Interative
       chapters: 
         - "content/interactive/dotnet-interactive.qmd"
-        - "playground/polyglot-cs.ipynb"
     - part: CLI
       chapters: 
         - "content/basic/cs_cli-args.qmd"
