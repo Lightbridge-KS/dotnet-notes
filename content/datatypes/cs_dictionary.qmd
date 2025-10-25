@@ -1,0 +1,397 @@
+# Dictionary in C# - A Crash Course
+
+::: {.callout-note appearance="default" collapse="false"}
+**Q:** Teach me a crash course about `Dictionary` and its methods (include how to create, index, safely get values, iterate over, etc.)
+:::
+
+
+## What is Dictionary?
+
+
+```
+Dictionary<TKey, TValue>
+         ┌─────┴─────┐
+         │           │
+    Key Type    Value Type
+         │           │
+         └─────┬─────┘
+               │
+    ┌──────────┴───────────┐
+    │  Key-Value Pairs     │
+    │  ┌────────┬────────┐ │
+    │  │  Key   │ Value  │ │
+    │  ├────────┼────────┤ │
+    │  │ "ABC"  │   123  │ │
+    │  │ "DEF"  │   456  │ │
+    │  │ "GHI"  │   789  │ │
+    │  └────────┴────────┘ │
+    └──────────────────────┘
+```
+
+`Dictionary<TKey, TValue>` is a **generic** collection that stores key-value pairs. Keys must be **unique** and **non-null**.
+
+
+## Creating Dictionaries
+
+
+### Basic Creation
+
+```csharp
+using System;
+using System.Collections.Generic;
+
+// 1. Empty dictionary
+var emptyDict = new Dictionary<string, int>();
+
+// 2. Collection initializer (most common)
+var modalityCount = new Dictionary<string, int>
+{
+    { "CT", 150 },
+    { "MR", 200 },
+    { "CR", 300 }
+};
+
+// 3. Dictionary initializer (cleaner syntax - C# 6+)
+var modalityCodes = new Dictionary<string, string>
+{
+    ["CT"] = "Computed Tomography",
+    ["MR"] = "Magnetic Resonance",
+    ["US"] = "Ultrasound"
+};
+
+// 4. With initial capacity (for performance)
+var largeDict = new Dictionary<string, string>(1000);
+```
+
+**Comparison with Python:**
+```python
+# Python
+modality_count = {"CT": 150, "MR": 200, "CR": 300}
+
+# C#
+var modalityCount = new Dictionary<string, int> { {"CT", 150}, {"MR", 200}, {"CR", 300} };
+```
+
+
+## Adding and Accessing Elements
+
+
+```csharp
+var studies = new Dictionary<string, string>();
+
+// 1. Add using indexer (overwrites if key exists)
+studies["1.2.840.113619.2.55"] = "CT Chest";
+studies["1.2.840.113619.2.56"] = "MR Brain";
+
+// 2. Add using Add method (throws if key exists)
+try
+{
+    studies.Add("1.2.840.113619.2.55", "CT Abdomen"); // ❌ Throws ArgumentException
+}
+catch (ArgumentException)
+{
+    Console.WriteLine("Key already exists!");
+}
+
+// 3. TryAdd (returns false if key exists - C# 8+)
+bool added = studies.TryAdd("1.2.840.113619.2.55", "CT Abdomen"); 
+Console.WriteLine($"Added: {added}"); // False
+
+// Accessing by key (throws if key doesn't exist)
+string studyDesc = studies["1.2.840.113619.2.55"];
+```
+
+
+## Safely Getting Values
+
+
+```csharp
+var modalityNames = new Dictionary<string, string>
+{
+    ["CT"] = "Computed Tomography",
+    ["MR"] = "Magnetic Resonance"
+};
+
+// ❌ UNSAFE: Direct access - throws KeyNotFoundException
+// string name = modalityNames["XR"]; // Throws!
+
+// ✅ Method 1: TryGetValue (RECOMMENDED)
+if (modalityNames.TryGetValue("XR", out string? name))
+{
+    Console.WriteLine($"Found: {name}");
+}
+else
+{
+    Console.WriteLine("Key not found");
+}
+
+// ✅ Method 2: ContainsKey check
+if (modalityNames.ContainsKey("CT"))
+{
+    string ctName = modalityNames["CT"];
+    Console.WriteLine(ctName);
+}
+
+// ✅ Method 3: GetValueOrDefault (C# 9+)
+string xrName = modalityNames.GetValueOrDefault("XR", "Unknown Modality");
+Console.WriteLine(xrName); // "Unknown Modality"
+
+// Without default value
+string? mrName = modalityNames.GetValueOrDefault("MR");
+Console.WriteLine(mrName); // "Magnetic Resonance"
+```
+
+
+## Iterating Over Dictionaries
+
+
+```csharp
+var patientData = new Dictionary<string, int>
+{
+    ["StudyCount"] = 5,
+    ["SeriesCount"] = 15,
+    ["ImageCount"] = 450
+};
+
+// 1. Iterate over KeyValuePair
+foreach (KeyValuePair<string, int> kvp in patientData)
+{
+    Console.WriteLine($"{kvp.Key}: {kvp.Value}");
+}
+
+// 2. Using var (cleaner)
+foreach (var kvp in patientData)
+{
+    Console.WriteLine($"{kvp.Key}: {kvp.Value}");
+}
+
+// 3. Deconstruction (C# 7+) - MOST COMMON
+foreach (var (key, value) in patientData)
+{
+    Console.WriteLine($"{key}: {value}");
+}
+
+// 4. Iterate over keys only
+foreach (string key in patientData.Keys)
+{
+    Console.WriteLine($"Key: {key}");
+}
+
+// 5. Iterate over values only
+foreach (int value in patientData.Values)
+{
+    Console.WriteLine($"Value: {value}");
+}
+```
+
+
+## Common Methods and Properties
+
+
+```csharp
+var dicomTags = new Dictionary<string, string>
+{
+    ["0010,0010"] = "Patient Name",
+    ["0010,0020"] = "Patient ID",
+    ["0008,0060"] = "Modality"
+};
+
+// Count
+Console.WriteLine($"Total tags: {dicomTags.Count}"); // 3
+
+// Clear all items
+var temp = new Dictionary<string, string>(dicomTags);
+temp.Clear();
+Console.WriteLine($"After clear: {temp.Count}"); // 0
+
+// Remove a key
+bool removed = dicomTags.Remove("0010,0020");
+Console.WriteLine($"Removed: {removed}"); // True
+
+// ContainsKey
+bool hasModality = dicomTags.ContainsKey("0008,0060"); // True
+
+// ContainsValue (slower - O(n))
+bool hasPatientName = dicomTags.ContainsValue("Patient Name"); // True
+
+// Keys and Values collections
+ICollection<string> keys = dicomTags.Keys;
+ICollection<string> values = dicomTags.Values;
+```
+
+
+## LINQ with Dictionaries
+
+
+```csharp
+var studyCounts = new Dictionary<string, int>
+{
+    ["CT"] = 150,
+    ["MR"] = 200,
+    ["CR"] = 300,
+    ["US"] = 50,
+    ["XR"] = 400
+};
+
+// Filter
+var highVolume = studyCounts
+    .Where(kvp => kvp.Value > 100)
+    .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+
+// Transform values
+var doubled = studyCounts
+    .ToDictionary(kvp => kvp.Key, kvp => kvp.Value * 2);
+
+// Order by value
+var sorted = studyCounts
+    .OrderByDescending(kvp => kvp.Value)
+    .ToList(); // Returns List<KeyValuePair>
+
+foreach (var (modality, count) in sorted)
+{
+    Console.WriteLine($"{modality}: {count}");
+}
+
+// Sum all values
+int total = studyCounts.Values.Sum();
+
+// Get max value
+int max = studyCounts.Values.Max();
+
+// Get key with max value
+string topModality = studyCounts
+    .OrderByDescending(kvp => kvp.Value)
+    .First()
+    .Key;
+```
+
+
+## Dictionary vs Other Collections
+
+
+```
+┌─────────────────────────────────────────────────────────┐
+│            Collection Type Comparison                    │
+├────────────────┬──────────────┬─────────────────────────┤
+│ Type           │ Access       │ Use Case                 │
+├────────────────┼──────────────┼─────────────────────────┤
+│ Dictionary     │ O(1) by key  │ Key-value lookups        │
+│ List           │ O(1) by idx  │ Ordered collection       │
+│ HashSet        │ O(1)         │ Unique values only       │
+│ SortedDict     │ O(log n)     │ Sorted key-value pairs   │
+└────────────────┴──────────────┴─────────────────────────┘
+```
+
+
+## Practical Example: DICOM Study Manager
+
+
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class Program
+{
+    static void Main()
+    {
+        // Create a dictionary to map Study Instance UID to Study Description
+        var studies = new Dictionary<string, string>
+        {
+            ["1.2.840.113619.2.55.1.1"] = "CT Chest with Contrast",
+            ["1.2.840.113619.2.55.1.2"] = "MR Brain without Contrast",
+            ["1.2.840.113619.2.55.1.3"] = "CR Chest PA and Lateral"
+        };
+
+        // Safe access with TryGetValue
+        string targetUid = "1.2.840.113619.2.55.1.2";
+        if (studies.TryGetValue(targetUid, out string? description))
+        {
+            Console.WriteLine($"Found study: {description}");
+        }
+
+        Console.WriteLine("\nAll Studies:");
+        Console.WriteLine("─────────────");
+        
+        // Iterate with deconstruction
+        foreach (var (uid, desc) in studies)
+        {
+            Console.WriteLine($"UID: {uid}");
+            Console.WriteLine($"Description: {desc}\n");
+        }
+
+        // Count studies by modality
+        var modalityCounts = new Dictionary<string, int>();
+        
+        foreach (var desc in studies.Values)
+        {
+            string modality = desc.Split(' ')[0]; // Get first word
+            
+            if (modalityCounts.ContainsKey(modality))
+            {
+                modalityCounts[modality]++;
+            }
+            else
+            {
+                modalityCounts[modality] = 1;
+            }
+        }
+
+        Console.WriteLine("Modality Counts:");
+        Console.WriteLine("────────────────");
+        
+        foreach (var (modality, count) in modalityCounts.OrderByDescending(x => x.Count))
+        {
+            Console.WriteLine($"{modality}: {count}");
+        }
+    }
+}
+```
+
+**Output:**
+```
+Found study: MR Brain without Contrast
+
+All Studies:
+─────────────
+UID: 1.2.840.113619.2.55.1.1
+Description: CT Chest with Contrast
+
+UID: 1.2.840.113619.2.55.1.2
+Description: MR Brain without Contrast
+
+UID: 1.2.840.113619.2.55.1.3
+Description: CR Chest PA and Lateral
+
+Modality Counts:
+────────────────
+CT: 1
+MR: 1
+CR: 1
+```
+
+
+## Key Differences from Python
+
+
+| Feature | Python | C# |
+|---------|--------|-----|
+| Access missing key | Returns `None` or raises `KeyError` | Throws `KeyNotFoundException` |
+| Safe access | `.get(key, default)` | `.TryGetValue(key, out value)` |
+| Check existence | `key in dict` | `.ContainsKey(key)` |
+| Type safety | Dynamic | Strongly typed: `Dictionary<TKey, TValue>` |
+| Declaration | `dict = {}` | `new Dictionary<string, int>()` |
+
+
+## Important Notes
+
+
+1. **Keys must be immutable** - strings, numbers, enums are good. Custom objects must properly implement `GetHashCode()` and `Equals()`
+
+2. **Null keys not allowed** - Unlike Python, you cannot use `null` as a key
+
+3. **Value types** - If using nullable value types, declare as `Dictionary<string, int?>`
+
+4. **Thread safety** - `Dictionary` is NOT thread-safe. Use `ConcurrentDictionary` for multi-threaded scenarios
+
+5. **Performance** - Dictionary operations are O(1) average case, but can degrade to O(n) with poor hash functions
