@@ -1,4 +1,4 @@
-# C# Classes Crash Course
+# C# Classes
 
 Let me walk you through C# classes with practical examples!
 
@@ -35,6 +35,7 @@ person.Introduce();
 ```
 
 **Key Points:**
+
 - Fields store object data
 - Constructor initializes the object when created with `new`
 - `this` keyword refers to the current instance
@@ -195,6 +196,7 @@ Console.WriteLine($"Total counters: {Counter.GetTotalCount()}"); // 2
 ```
 
 **Key Differences:**
+
 - **Instance members:** Accessed through object instances (`counter1.Increment()`)
 - **Static members:** Accessed through class name (`Counter.GetTotalCount()`)
 - Static members cannot access instance members directly
@@ -509,6 +511,7 @@ foreach (var a in animals)
 ```
 
 **Key Inheritance Keywords:**
+
 - `virtual`: Method can be overridden in derived classes
 - `override`: Overrides a virtual method from base class
 - `base`: Access base class members

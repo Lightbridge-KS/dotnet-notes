@@ -35,6 +35,7 @@ book:
     - part: OOP
       chapters: 
         - "content/oop/cs_classes.qmd"
+        - "content/oop/cs_classes_nested.qmd"
         - "content/oop/cs_type-inferred-object-creation.qmd"
         - "content/oop/cs_record.qmd"
         - "content/oop/cs_methods.qmd"

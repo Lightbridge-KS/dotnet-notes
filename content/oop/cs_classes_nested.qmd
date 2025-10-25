@@ -1,0 +1,306 @@
+# Nested Classes
+
+**Classes can definitely be nested in C#**. A nested class is a class defined within another class, and it's a powerful feature for organizing related code.
+
+
+## Basic Syntax
+
+
+```csharp
+public class OuterClass
+{
+    // Nested class
+    public class NestedClass
+    {
+        public string Message { get; set; }
+    }
+    
+    private int outerField = 10;
+    
+    public void OuterMethod()
+    {
+        // Can create instance of nested class
+        var nested = new NestedClass();
+    }
+}
+
+// Usage
+var outer = new OuterClass();
+var nested = new OuterClass.NestedClass(); // Access via OuterClass
+nested.Message = "Hello from nested class";
+```
+
+
+## Access Levels & Scope
+
+
+Nested classes can have different access modifiers and behaviors:
+
+```csharp
+public class DicomStudy
+{
+    // Public nested class - accessible from outside
+    public class Series
+    {
+        public string SeriesInstanceUID { get; set; }
+        public string Modality { get; set; }
+    }
+    
+    // Private nested class - only accessible within DicomStudy
+    private class StudyMetadata
+    {
+        public DateTime StudyDate { get; set; }
+        public string ReferringPhysician { get; set; }
+    }
+    
+    // Protected nested class - accessible in derived classes
+    protected class StudyStatistics
+    {
+        public int TotalImages { get; set; }
+        public long TotalSizeBytes { get; set; }
+    }
+}
+```
+
+
+## Key Characteristics
+
+
+```
+┌─────────────────────────────────────────┐
+│         OuterClass                      │
+│  ┌───────────────────────────────────┐  │
+│  │      NestedClass                  │  │
+│  │                                   │  │
+│  │  - Can access outer's private     │  │
+│  │    members (if non-static)        │  │
+│  │                                   │  │
+│  │  - Has its own access modifiers   │  │
+│  │                                   │  │
+│  │  - Full-fledged class             │  │
+│  └───────────────────────────────────┘  │
+│                                         │
+│  - Provides namespace organization      │
+│  - Encapsulates related functionality   │
+└─────────────────────────────────────────┘
+```
+
+
+## Accessing Outer Class Members
+
+
+A nested class can access private members of the outer class **if it has a reference to an instance**:
+
+```csharp
+public class DicomFile
+{
+    private string _filePath;
+    private byte[] _pixelData;
+    
+    public DicomFile(string path)
+    {
+        _filePath = path;
+    }
+    
+    // Nested class for metadata extraction
+    public class MetadataExtractor
+    {
+        private DicomFile _parentFile;
+        
+        public MetadataExtractor(DicomFile parent)
+        {
+            _parentFile = parent;
+        }
+        
+        public string GetFilePath()
+        {
+            // Can access private field of outer class through instance
+            return _parentFile._filePath;
+        }
+        
+        public bool HasPixelData()
+        {
+            return _parentFile._pixelData != null;
+        }
+    }
+}
+
+// Usage
+var dicomFile = new DicomFile("/path/to/study.dcm");
+var extractor = new DicomFile.MetadataExtractor(dicomFile);
+string path = extractor.GetFilePath();
+```
+
+
+## Comparison with Python & Dart
+
+
+**Python:**
+```python
+class OuterClass:
+    class NestedClass:  # Just defines it in the namespace
+        def __init__(self):
+            self.message = "Hello"
+    
+    def __init__(self):
+        self.field = 10
+
+# Access
+nested = OuterClass.NestedClass()  # Similar to C#
+```
+
+**Dart:**
+```dart
+class OuterClass {
+  // Dart doesn't support nested classes directly
+  // You typically use separate top-level classes
+}
+```
+
+
+## When to Use Nested Classes
+
+
+**Good Use Cases:**
+
+1. **Builder Pattern**
+```csharp
+public class DicomQuery
+{
+    public string PatientId { get; private set; }
+    public string Modality { get; private set; }
+    public DateTime? StudyDateFrom { get; private set; }
+    
+    private DicomQuery() { }
+    
+    // Nested Builder class
+    public class Builder
+    {
+        private DicomQuery _query = new DicomQuery();
+        
+        public Builder WithPatientId(string patientId)
+        {
+            _query.PatientId = patientId;
+            return this;
+        }
+        
+        public Builder WithModality(string modality)
+        {
+            _query.Modality = modality;
+            return this;
+        }
+        
+        public Builder WithStudyDateFrom(DateTime date)
+        {
+            _query.StudyDateFrom = date;
+            return this;
+        }
+        
+        public DicomQuery Build() => _query;
+    }
+}
+
+// Usage
+var query = new DicomQuery.Builder()
+    .WithPatientId("12345")
+    .WithModality("CT")
+    .WithStudyDateFrom(DateTime.Now.AddDays(-30))
+    .Build();
+```
+
+2. **Tightly Coupled Helper Classes**
+```csharp
+public class PacsConnection
+{
+    private string _host;
+    private int _port;
+    
+    // Configuration that only makes sense with PacsConnection
+    public class ConnectionConfig
+    {
+        public int TimeoutSeconds { get; set; } = 30;
+        public int MaxRetries { get; set; } = 3;
+        public bool UseCompression { get; set; } = true;
+    }
+}
+```
+
+3. **Result/Response Types**
+```csharp
+public class DicomService
+{
+    // Nested result class
+    public class QueryResult
+    {
+        public bool Success { get; set; }
+        public List<string> StudyInstanceUIDs { get; set; }
+        public string ErrorMessage { get; set; }
+    }
+    
+    public QueryResult QueryStudies(string patientId)
+    {
+        // Implementation
+        return new QueryResult { Success = true };
+    }
+}
+```
+
+
+## When NOT to Use
+
+
+- **Overly deep nesting** - Makes code hard to navigate
+- **When class is used independently** - Just make it a separate class
+- **When it bloats the outer class** - Violates single responsibility
+
+
+## Static Nested Classes
+
+
+Nested classes can also be static, meaning they don't require an instance of the outer class:
+
+```csharp
+public class DicomValidator
+{
+    // Static nested class - like a utility class
+    public static class UidValidator
+    {
+        public static bool IsValidUid(string uid)
+        {
+            if (string.IsNullOrEmpty(uid)) return false;
+            
+            // UID validation logic
+            return uid.All(c => char.IsDigit(c) || c == '.');
+        }
+    }
+    
+    // Static nested class for constants
+    public static class VRCodes
+    {
+        public const string PersonName = "PN";
+        public const string Date = "DA";
+        public const string Time = "TM";
+        public const string UniqueIdentifier = "UI";
+    }
+}
+
+// Usage - no instance needed
+bool valid = DicomValidator.UidValidator.IsValidUid("1.2.840.113619");
+string vrCode = DicomValidator.VRCodes.PersonName;
+```
+
+
+## Summary
+
+
+| Feature | C# Nested Class |
+|---------|----------------|
+| **Syntax** | `class Outer { class Nested { } }` |
+| **Access** | Via `Outer.Nested` |
+| **Can access outer privates** | Yes (with instance reference) |
+| **Can be static** | Yes |
+| **Access modifiers** | All (public, private, protected, etc.) |
+| **Common uses** | Builders, tightly-coupled helpers, result types |
+
+
+Nested classes are a great organizational tool, but use them judiciously. If your nested class grows large or is needed elsewhere, consider extracting it to a separate file! 🎯
