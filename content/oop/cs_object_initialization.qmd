@@ -1,0 +1,270 @@
+# Object Init
+
+::: {.callout-note appearance="default" collapse="false"}
+**Q:** What's the difference between: "object initializer" vs "constructor" vs "constructor body"
+:::
+
+Let's dive into your question about object initialization patterns.
+
+
+## Overview
+
+
+These are three different ways to set up object state in C#. Let me break them down:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Object Creation Timeline                  │
+├─────────────────────────────────────────────────────────────┤
+│                                                               │
+│  1. Constructor Parameters  →  Values passed in              │
+│           ↓                                                   │
+│  2. Constructor Body       →  Initialization logic runs      │
+│           ↓                                                   │
+│  3. Object Initializer     →  Properties set after creation  │
+│           ↓                                                   │
+│  4. Object Ready           →  Fully initialized              │
+│                                                               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+
+## 1. Constructor
+
+
+A special method that runs when you create an object. It has **parameters** to receive values.
+
+```csharp
+public class Patient
+{
+    public string HN { get; set; }
+    public string Name { get; set; }
+    
+    // Constructor with parameters
+    public Patient(string hn, string name)
+    {
+        HN = hn;
+        Name = name;
+    }
+}
+
+// Usage
+var patient = new Patient("123456", "John Doe");
+```
+
+**Python equivalent:**
+```python
+def __init__(self, hn, name):
+    self.hn = hn
+    self.name = name
+```
+
+
+## 2. Constructor Body
+
+
+The **code inside** the constructor that runs during object creation. This is where you write initialization logic.
+
+```csharp
+public class DicomStudy
+{
+    public string StudyInstanceUID { get; set; }
+    public DateTime StudyDate { get; set; }
+    public string Status { get; set; }
+    
+    public DicomStudy(string studyUID)
+    {
+        // ← This whole block is the "constructor body"
+        StudyInstanceUID = studyUID;
+        StudyDate = DateTime.Now;
+        Status = "Pending";
+        
+        // You can add validation
+        if (string.IsNullOrEmpty(studyUID))
+            throw new ArgumentException("Study UID cannot be empty");
+            
+        // You can add complex logic
+        Console.WriteLine($"Created study: {studyUID}");
+    }
+}
+```
+
+
+## 3. Object Initializer
+
+
+Syntax that lets you set **public properties** after the object is created, but in the same statement.
+
+```csharp
+public class Modality
+{
+    public string Code { get; set; }
+    public string Description { get; set; }
+    public int MaxStudiesPerDay { get; set; }
+}
+
+// Object initializer syntax (no constructor needed)
+var ct = new Modality
+{
+    Code = "CT",
+    Description = "Computed Tomography",
+    MaxStudiesPerDay = 50
+};
+```
+
+
+## Complete Comparison Example
+
+
+```csharp
+public class RadiologyReport
+{
+    public string AccessionNumber { get; set; }
+    public string Modality { get; set; }
+    public string Status { get; set; }
+    public DateTime CreatedDate { get; set; }
+    
+    // Constructor
+    public RadiologyReport(string accessionNumber)
+    {
+        // Constructor body starts here
+        AccessionNumber = accessionNumber;
+        CreatedDate = DateTime.Now;
+        Status = "Draft"; // Default value
+        
+        Console.WriteLine("Constructor executed");
+        // Constructor body ends here
+    }
+}
+
+// Method 1: Using constructor only
+var report1 = new RadiologyReport("ACC001");
+report1.Modality = "CT";
+
+// Method 2: Constructor + Object Initializer
+var report2 = new RadiologyReport("ACC002")
+{
+    // Object initializer - runs AFTER constructor
+    Modality = "MRI",
+    Status = "Final"  // This overwrites the "Draft" from constructor
+};
+```
+
+
+## Execution Order Diagram
+
+
+```
+new RadiologyReport("ACC002") { Modality = "MRI", Status = "Final" }
+│
+├─ Step 1: Allocate memory for object
+│
+├─ Step 2: Run Constructor
+│   │
+│   ├─ AccessionNumber = "ACC002"  (from parameter)
+│   ├─ CreatedDate = DateTime.Now  (in constructor body)
+│   └─ Status = "Draft"             (in constructor body)
+│
+├─ Step 3: Run Object Initializer
+│   │
+│   ├─ Modality = "MRI"             (from initializer)
+│   └─ Status = "Final"             (from initializer, OVERWRITES "Draft")
+│
+└─ Step 4: Return fully initialized object
+```
+
+
+## When to Use Each
+
+
+**Use Constructor when:**
+- Values are **required** for object to be valid
+- You need **validation logic**
+- You need **complex initialization** (calculations, method calls)
+- Setting **read-only** properties (with `{ get; }`)
+
+**Use Object Initializer when:**
+- Properties are **optional**
+- Simple property assignments
+- Want **flexibility** in what to set
+- Working with DTOs or POCOs
+
+
+## Practical Example: DICOM Series
+
+
+```csharp
+public class DicomSeries
+{
+    public string SeriesInstanceUID { get; }  // Read-only, must use constructor
+    public string SeriesDescription { get; set; }
+    public string Modality { get; set; }
+    public int ImageCount { get; set; }
+    public DateTime CreatedDate { get; }
+    
+    // Constructor for required fields
+    public DicomSeries(string seriesUID, string modality)
+    {
+        // Constructor body - validation and required fields
+        if (string.IsNullOrEmpty(seriesUID))
+            throw new ArgumentException("Series UID required");
+            
+        SeriesInstanceUID = seriesUID;  // Must set here (read-only)
+        Modality = modality;
+        CreatedDate = DateTime.Now;
+        ImageCount = 0;  // Default
+    }
+}
+
+// Usage: Constructor + Object Initializer together
+var series = new DicomSeries("1.2.840.113...", "CT")
+{
+    SeriesDescription = "Chest CT with contrast",
+    ImageCount = 150
+};
+```
+
+
+## Comparison to Other Languages
+
+
+**Dart/Flutter:**
+```dart
+class Patient {
+  String hn;
+  String name;
+  
+  // Constructor
+  Patient(this.hn, this.name);  // Short syntax
+  
+  // Named parameters (similar to object initializer)
+  Patient.withName({required this.hn, required this.name});
+}
+```
+
+**Python:**
+```python
+# Constructor
+class Patient:
+    def __init__(self, hn, name):  # Constructor body
+        self.hn = hn
+        self.name = name
+
+# Python doesn't have object initializer syntax
+# But you can use dict unpacking
+patient = Patient(**{'hn': '123', 'name': 'John'})
+```
+
+
+## Key Takeaways
+
+
+```
+┌──────────────────┬─────────────────────────────────────────┐
+│                  │ When It Runs                            │
+├──────────────────┼─────────────────────────────────────────┤
+│ Constructor      │ When 'new' keyword is used              │
+│ Constructor Body │ The code inside constructor             │
+│ Object Init.     │ AFTER constructor, before assignment    │
+└──────────────────┴─────────────────────────────────────────┘
+```

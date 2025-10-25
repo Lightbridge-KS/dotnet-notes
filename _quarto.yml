@@ -34,6 +34,7 @@ book:
     - part: OOP
       chapters: 
         - "content/oop/cs_type-inferred-object-creation.qmd"
+        - "content/oop/cs_object_initialization.qmd"
         - "content/oop/cs_record.qmd"
         - "content/oop/cs_methods.qmd"
         - "content/oop/cs_methods_overloading.qmd"
