@@ -1,0 +1,445 @@
+# .NET Interactive Notebooks
+
+
+## File Extensions
+
+
+```
+.dib    → .NET Interactive notebook format (recommended)
+.ipynb  → Jupyter notebook format (compatible)
+```
+
+
+## Kernel Selection
+
+
+```csharp
+// At top of notebook or per cell
+#!csharp      // C# (default)
+#!fsharp      // F#
+#!pwsh        // PowerShell
+#!javascript  // JavaScript
+#!html        // HTML
+#!sql         // SQL
+#!markdown    // Markdown
+```
+
+
+## Loading Code
+
+
+### Import Source Files
+
+
+```csharp
+#!import MyClass.cs                    // Import C# source file
+#!import ./Models/DicomStudy.cs        // Relative path
+#!import ../Shared/Utilities.cs        // Parent directory
+```
+
+
+### Reference DLLs
+
+
+```csharp
+#r "path/to/MyLibrary.dll"                           // Compiled assembly
+#r "../MyProject/bin/Debug/net9.0/MyProject.dll"     // Project output
+```
+
+
+### NuGet Packages
+
+
+```csharp
+#r "nuget: PackageName"                    // Latest version
+#r "nuget: Newtonsoft.Json, 13.0.3"       // Specific version
+#r "nuget: fo-dicom, 5.1.2"               // DICOM library example
+```
+
+
+## Variable Sharing Between Kernels
+
+
+```csharp
+// C# cell
+var patientCount = 42;
+```
+
+```fsharp
+// F# cell - access C# variable
+#!fsharp
+#!share --from csharp patientCount
+printfn "Patient count: %d" patientCount
+```
+
+```javascript
+// JavaScript cell - access C# variable
+#!javascript
+#!share --from csharp patientCount
+console.log(`Patient count: ${patientCount}`);
+```
+
+
+## Display & Output
+
+
+### Basic Output
+
+
+```csharp
+Console.WriteLine("Simple text");
+Console.Write($"Inline: {value}");
+```
+
+
+### Rich Display
+
+
+```csharp
+// Display objects
+var study = new DicomStudy("UID123", "P001", "CT", DateTime.Now, 150);
+display(study);                    // Displays as formatted object
+
+// Display collections as tables
+var studies = GetStudies();
+display(studies);                  // Auto-formats as table
+
+// Display HTML
+display(
+    HTML("<h3>Patient Statistics</h3><p>Total: 42</p>")
+);
+
+// Display markdown
+display(
+    Markdown("## Results\n- Item 1\n- Item 2")
+);
+```
+
+
+### Multiple Outputs
+
+
+```csharp
+Console.WriteLine("First output");
+display("Second output");
+return "Third output";  // Last expression auto-displayed
+```
+
+
+## Magic Commands Reference
+
+
+```
+Code Loading:
+#!import <file>          Load C# source file
+#r <dll>                 Reference assembly/NuGet
+
+Kernel Control:
+#!csharp                 Switch to C# kernel
+#!fsharp                 Switch to F# kernel
+#!pwsh                   Switch to PowerShell
+#!javascript             Switch to JavaScript
+#!html                   Switch to HTML
+#!markdown               Switch to Markdown
+
+Variable Sharing:
+#!share --from <kernel> <variable>     Share variable from another kernel
+#!set --name <var> --value <val>       Set variable from magic command
+
+Time Measurement:
+#!time                   Measure cell execution time
+
+Help & Info:
+#!about                  Show notebook info
+#!lsmagic                List all magic commands
+```
+
+
+## Keyboard Shortcuts
+
+
+```
+Shift + Enter    → Run cell and move to next
+Ctrl + Enter     → Run cell and stay
+Alt + Enter      → Run cell and insert below
+Esc              → Command mode
+Enter            → Edit mode
+A                → Insert cell above (command mode)
+B                → Insert cell below (command mode)
+DD               → Delete cell (command mode)
+```
+
+
+## Timing & Performance
+
+
+```csharp
+#!time
+// Your code here - execution time will be shown
+var result = ExpensiveOperation();
+```
+
+
+## Working with Multiple Languages
+
+
+```
+Workflow Diagram:
+─────────────────
+
+┌─────────────┐
+│  C# Cell    │  Load & process DICOM data
+│  (Analysis) │  
+└──────┬──────┘
+       │ #!share
+       ▼
+┌─────────────┐
+│  F# Cell    │  Statistical analysis
+│  (Stats)    │
+└──────┬──────┘
+       │ #!share
+       ▼
+┌─────────────┐
+│ JavaScript  │  Create interactive charts
+│ (Viz)       │
+└─────────────┘
+```
+
+
+**Example:**
+
+
+```csharp
+// C# Cell
+var studies = new[] { 
+    new { Modality = "CT", Count = 150 },
+    new { Modality = "MR", Count = 200 }
+};
+```
+
+```javascript
+// JavaScript Cell
+#!javascript
+#!share --from csharp studies
+console.log(studies);
+// Use with Chart.js, D3.js, etc.
+```
+
+
+## Common Patterns
+
+
+### Pattern 1: Load Library + Use
+
+
+```csharp
+// Cell 1: Setup
+#r "nuget: Newtonsoft.Json, 13.0.3"
+using Newtonsoft.Json;
+```
+
+```csharp
+// Cell 2: Use
+var json = JsonConvert.SerializeObject(myObject);
+Console.WriteLine(json);
+```
+
+
+### Pattern 2: Import Models + Analyze
+
+
+```csharp
+// Cell 1: Import
+#!import DicomModels.cs
+using RadiologyModels;
+```
+
+```csharp
+// Cell 2: Load data
+var studies = LoadStudies();
+display(studies);
+```
+
+```csharp
+// Cell 3: Analyze
+var stats = DicomAnalyzer.AnalyzeByModality(studies);
+display(stats);
+```
+
+
+### Pattern 3: Multi-language Pipeline
+
+
+```csharp
+// Cell 1: C# - Data preparation
+var processedData = studies
+    .Where(s => s.Modality == "CT")
+    .Select(s => new { s.PatientID, s.NumberOfImages })
+    .ToList();
+```
+
+```fsharp
+// Cell 2: F# - Statistical analysis
+#!fsharp
+#!share --from csharp processedData
+
+let avgImages = 
+    processedData 
+    |> Seq.averageBy (fun x -> float x.NumberOfImages)
+    
+printfn "Average images: %.2f" avgImages
+```
+
+```javascript
+// Cell 3: JavaScript - Visualization
+#!javascript
+#!share --from csharp processedData
+// Create chart with processedData
+```
+
+
+## HTML & JavaScript Integration
+
+
+```csharp
+// Display interactive HTML/JS
+var html = $"""
+<div id="output"></div>
+<script>
+    document.getElementById('output').innerHTML = 
+        '<h3>Studies: {studies.Count}</h3>';
+</script>
+""";
+
+display(HTML(html));
+```
+
+
+## Useful Namespaces
+
+
+```csharp
+using System;                      // Core types
+using System.Collections.Generic;  // Lists, dictionaries
+using System.Linq;                 // LINQ queries
+using System.IO;                   // File operations
+using System.Text.Json;            // JSON (built-in)
+using System.Net.Http;             // HTTP requests
+```
+
+
+## File I/O
+
+
+```csharp
+// Read file relative to notebook
+var content = File.ReadAllText("data.json");
+
+// Write output
+File.WriteAllText("output.csv", csvData);
+
+// Get notebook directory
+var notebookDir = Directory.GetCurrentDirectory();
+Console.WriteLine($"Working in: {notebookDir}");
+```
+
+
+## Error Handling
+
+
+```csharp
+try 
+{
+    var result = RiskyOperation();
+    display(result);
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Error: {ex.Message}");
+    // Cell continues, doesn't crash notebook
+}
+```
+
+
+## Quick Reference: C# vs Python Notebooks
+
+
+```
+Feature              Jupyter (Python)           .NET Interactive
+────────────────────────────────────────────────────────────────
+File extension       .ipynb                     .dib or .ipynb
+Magic commands       %pip install               #r "nuget:"
+Import code          from module import         #!import file.cs
+Display              display(obj)               display(obj)
+Rich output          IPython.display            HTML(), Markdown()
+Multi-language       %%javascript               #!javascript
+Variable share       N/A (same kernel)          #!share --from
+Time execution       %%time                     #!time
+```
+
+
+## Pro Tips
+
+
+```
+✓ Use #!import for frequent iterations (auto-reloads)
+✓ Use #r for stable compiled libraries
+✓ Keep each cell focused on one task
+✓ Use display() for rich object visualization
+✓ Restart kernel if imported .cs files change
+✓ Use #!time to identify slow operations
+✓ Save notebooks as .dib for better git diffs
+```
+
+
+## Common Issues & Solutions
+
+
+```
+Problem: Changes in .cs file not reflected
+Solution: Restart kernel (click restart button or Ctrl+Shift+P → "Restart")
+
+Problem: "Namespace not found"
+Solution: Add 'using' statement after #!import
+
+Problem: NuGet package not loading
+Solution: Check package name/version, restart kernel
+
+Problem: Variable not shared between kernels
+Solution: Use #!share --from <kernel> <variable>
+```
+
+
+## Example: Complete Radiology Workflow
+
+
+```csharp
+// Cell 1: Setup
+#!import DicomModels.cs
+#r "nuget: Newtonsoft.Json, 13.0.3"
+
+using RadiologyModels;
+using Newtonsoft.Json;
+```
+
+```csharp
+// Cell 2: Load data
+var jsonData = File.ReadAllText("studies.json");
+var studies = JsonConvert.DeserializeObject<List<DicomStudy>>(jsonData);
+Console.WriteLine($"Loaded {studies.Count} studies");
+```
+
+```csharp
+// Cell 3: Analysis
+var ctStudies = studies.Where(s => s.Modality == "CT").ToList();
+var stats = DicomAnalyzer.AnalyzeByModality(ctStudies);
+display(stats);
+```
+
+```csharp
+// Cell 4: Export results
+var resultJson = JsonConvert.SerializeObject(stats, Formatting.Indented);
+File.WriteAllText("ct_statistics.json", resultJson);
+Console.WriteLine("✓ Results exported");
+```
+

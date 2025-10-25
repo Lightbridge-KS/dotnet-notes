@@ -1,0 +1,25 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"name":"csharp"},{"name":"fsharp","languageName":"F#","aliases":["f#","fs"]},{"name":"html","languageName":"HTML"},{"name":"http","languageName":"HTTP"},{"name":"javascript","languageName":"JavaScript","aliases":["js"]},{"name":"mermaid","languageName":"Mermaid"},{"name":"pwsh","languageName":"PowerShell","aliases":["powershell"]},{"name":"value"}]}}
+
+#!markdown
+
+# Import CS File
+
+#!csharp
+
+// Load the source file
+#!import Models/DicomModels.cs
+
+#!csharp
+
+var study = new DicomStudy(
+    "1.2.840.113619.2.55.1001", 
+    "P001", 
+    "CT", 
+    DateTime.Now, 
+    150
+);
+
+var service = new DicomService();
+Console.WriteLine($"Study: {study.PatientID} - {study.Modality}");

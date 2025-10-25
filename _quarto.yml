@@ -45,9 +45,10 @@ book:
         - "content/validate/record_validation.qmd"
         - "content/validate/DataAnnotations-CheatSheet.qmd"
         - "content/validate/DataAnnotations-Validate.qmd"
-    - part: NB
+    - part: .NET Interative
       chapters: 
-        - "content/polyglot-cs.ipynb"
+        - "content/interactive/dotnet-interactive.qmd"
+        - "playground/polyglot-cs.ipynb"
     - part: CLI
       chapters: 
         - "content/basic/cs_cli-args.qmd"
