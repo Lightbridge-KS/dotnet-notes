@@ -349,6 +349,7 @@ class Program
 ```
 
 **Output:**
+
 ```
 Found study: MR Brain without Contrast
 

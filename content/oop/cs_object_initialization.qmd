@@ -1,8 +1,5 @@
 # Object Init
 
-::: {.callout-note appearance="default" collapse="false"}
-**Q:** What's the difference between: "object initializer" vs "constructor" vs "constructor body"
-:::
 
 Let's dive into your question about object initialization patterns.
 
@@ -10,21 +7,21 @@ Let's dive into your question about object initialization patterns.
 ## Overview
 
 
-These are three different ways to set up object state in C#. Let me break them down:
+These are three different ways to set up object state in `C#`. Let me break them down:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Object Creation Timeline                  │
+│                    Object Creation Timeline                 │
 ├─────────────────────────────────────────────────────────────┤
-│                                                               │
-│  1. Constructor Parameters  →  Values passed in              │
-│           ↓                                                   │
-│  2. Constructor Body       →  Initialization logic runs      │
-│           ↓                                                   │
-│  3. Object Initializer     →  Properties set after creation  │
-│           ↓                                                   │
-│  4. Object Ready           →  Fully initialized              │
-│                                                               │
+│                                                             │
+│  1. Constructor Parameters  →  Values passed in             │
+│           ↓                                                 │
+│  2. Constructor Body       →  Initialization logic runs     │
+│           ↓                                                 │
+│  3. Object Initializer     →  Properties set after creation │
+│           ↓                                                 │
+│  4. Object Ready           →  Fully initialized             │
+│                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -53,6 +50,7 @@ var patient = new Patient("123456", "John Doe");
 ```
 
 **Python equivalent:**
+
 ```python
 def __init__(self, hn, name):
     self.hn = hn
@@ -223,38 +221,6 @@ var series = new DicomSeries("1.2.840.113...", "CT")
     ImageCount = 150
 };
 ```
-
-
-## Comparison to Other Languages
-
-
-**Dart/Flutter:**
-```dart
-class Patient {
-  String hn;
-  String name;
-  
-  // Constructor
-  Patient(this.hn, this.name);  // Short syntax
-  
-  // Named parameters (similar to object initializer)
-  Patient.withName({required this.hn, required this.name});
-}
-```
-
-**Python:**
-```python
-# Constructor
-class Patient:
-    def __init__(self, hn, name):  # Constructor body
-        self.hn = hn
-        self.name = name
-
-# Python doesn't have object initializer syntax
-# But you can use dict unpacking
-patient = Patient(**{'hn': '123', 'name': 'John'})
-```
-
 
 ## Key Takeaways
 

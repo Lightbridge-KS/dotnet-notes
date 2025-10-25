@@ -760,20 +760,19 @@ public class Motorcycle : Vehicle
 
 ## Quick Reference Table
 
-
 ```
 +------------------+------------------------------------------+
-| Feature          | Use Case                                  |
+| Feature          | Use Case                                 |
 +------------------+------------------------------------------+
-| Instance         | Data unique to each object                |
-| Static           | Shared data/utility methods               |
-| public           | API, meant to be used everywhere          |
-| private          | Internal implementation details           |
-| protected        | For derived classes only                  |
-| Auto-property    | Simple get/set without logic              |
-| Computed         | Calculate value on-the-fly                |
-| Inheritance      | "is-a" relationship, code reuse           |
-| Interface        | Contract, multiple inheritance            |
-| Abstract         | Partial implementation, template          |
+| Instance         | Data unique to each object               |
+| Static           | Shared data/utility methods              |
+| public           | API, meant to be used everywhere         |
+| private          | Internal implementation details          |
+| protected        | For derived classes only                 |
+| Auto-property    | Simple get/set without logic             |
+| Computed         | Calculate value on-the-fly               |
+| Inheritance      | "is-a" relationship, code reuse          |
+| Interface        | Contract, multiple inheritance           |
+| Abstract         | Partial implementation, template         |
 +------------------+------------------------------------------+
 ```
