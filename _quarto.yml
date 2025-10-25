@@ -40,6 +40,7 @@ book:
         - "content/oop/cs_record.qmd"
         - "content/oop/cs_methods.qmd"
         - "content/oop/cs_methods_overloading.qmd"
+        - "content/oop/cs_method_calling_order.qmd"
     - part: Data Conversion
       chapters: 
         - "content/conversion/cs_json.qmd"

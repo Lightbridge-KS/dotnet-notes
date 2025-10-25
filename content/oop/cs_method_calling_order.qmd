@@ -1,0 +1,303 @@
+# Method Calling Order
+
+::: {.callout-note appearance="default" collapse="false"}
+**Q:** Let's say I have a Class with two methods. 
+
+How can I add logic to enforce that `Method1()` is called BEFORE `Method2()`, when used.
+:::
+
+
+There are several ways to enforce method calling order in C#. Let me show you different approaches from simple to more elegant.
+
+
+## Approach 1: Boolean Flag (Simple)
+
+
+The simplest way is to track state with a boolean flag:
+
+```csharp
+public class DicomStudyProcessor
+{
+    private bool _isValidated = false;
+
+    public void ValidateStudy()
+    {
+        Console.WriteLine("Validating DICOM study...");
+        // Validation logic here
+        _isValidated = true;
+    }
+
+    public void ProcessImages()
+    {
+        if (!_isValidated)
+        {
+            throw new InvalidOperationException(
+                "Must call ValidateStudy() before ProcessImages()");
+        }
+        
+        Console.WriteLine("Processing images...");
+        // Processing logic here
+    }
+}
+```
+
+**ASCII Diagram:**
+
+```
+Call Order Check:
+┌─────────────────────────────────┐
+│  ValidateStudy()                │
+│  - Sets _isValidated = true     │
+└──────────┬──────────────────────┘
+           │
+           ▼
+┌─────────────────────────────────┐
+│  ProcessImages()                │
+│  - Checks _isValidated flag     │
+│  - Throws if false              │
+└─────────────────────────────────┘
+```
+
+
+## Approach 2: State Machine (More Robust)
+
+
+For complex workflows with multiple states:
+
+```csharp
+public enum ProcessingState
+{
+    Created,
+    Validated,
+    Processed,
+    Completed
+}
+
+public class DicomStudyProcessor
+{
+    private ProcessingState _state = ProcessingState.Created;
+
+    public void ValidateStudy()
+    {
+        if (_state != ProcessingState.Created)
+        {
+            throw new InvalidOperationException(
+                $"Cannot validate from state: {_state}");
+        }
+        
+        Console.WriteLine("Validating study...");
+        _state = ProcessingState.Validated;
+    }
+
+    public void ProcessImages()
+    {
+        if (_state != ProcessingState.Validated)
+        {
+            throw new InvalidOperationException(
+                $"Cannot process from state: {_state}. Must validate first.");
+        }
+        
+        Console.WriteLine("Processing images...");
+        _state = ProcessingState.Processed;
+    }
+
+    public void GenerateReport()
+    {
+        if (_state != ProcessingState.Processed)
+        {
+            throw new InvalidOperationException(
+                $"Cannot generate report from state: {_state}");
+        }
+        
+        Console.WriteLine("Generating report...");
+        _state = ProcessingState.Completed;
+    }
+}
+```
+
+**State Transition Diagram:**
+
+```
+Created ──ValidateStudy()──> Validated ──ProcessImages()──> Processed ──GenerateReport()──> Completed
+   │                            │                              │
+   └─── ✗ Invalid ──────────────┴───── ✗ Invalid ─────────────┘
+```
+
+
+## Approach 3: Fluent API / Builder Pattern (Most Elegant)
+
+
+This approach uses the **type system** to enforce the order at compile-time:
+
+```csharp
+// Step 1: Define interfaces for each stage
+public interface IStudyValidator
+{
+    IStudyProcessor ValidateStudy();
+}
+
+public interface IStudyProcessor
+{
+    IStudyReporter ProcessImages();
+}
+
+public interface IStudyReporter
+{
+    void GenerateReport();
+}
+
+// Step 2: Implement all stages in one class
+public class DicomStudyWorkflow : IStudyValidator, IStudyProcessor, IStudyReporter
+{
+    private DicomStudyWorkflow() { } // Private constructor
+
+    // Factory method - entry point
+    public static IStudyValidator Create()
+    {
+        return new DicomStudyWorkflow();
+    }
+
+    // Each method returns the next interface in the chain
+    public IStudyProcessor ValidateStudy()
+    {
+        Console.WriteLine("Validating study...");
+        return this;
+    }
+
+    public IStudyReporter ProcessImages()
+    {
+        Console.WriteLine("Processing images...");
+        return this;
+    }
+
+    public void GenerateReport()
+    {
+        Console.WriteLine("Generating report...");
+    }
+}
+
+// Usage:
+var workflow = DicomStudyWorkflow.Create()
+    .ValidateStudy()      // Returns IStudyProcessor
+    .ProcessImages()      // Returns IStudyReporter  
+    .GenerateReport();    // Returns void
+
+// This won't compile! ProcessImages() is not available on IStudyValidator
+// var workflow = DicomStudyWorkflow.Create().ProcessImages(); // ❌ Error!
+```
+
+**Type System Enforcement:**
+
+```
+DicomStudyWorkflow.Create()
+         │
+         ▼
+    IStudyValidator ──────> Only ValidateStudy() visible
+         │
+         │ .ValidateStudy()
+         ▼
+    IStudyProcessor ──────> Only ProcessImages() visible  
+         │
+         │ .ProcessImages()
+         ▼
+    IStudyReporter ───────> Only GenerateReport() visible
+         │
+         │ .GenerateReport()
+         ▼
+       void
+```
+
+
+## Comparison Table
+
+
+| Approach | Pros | Cons | Use When |
+|----------|------|------|----------|
+| **Boolean Flag** | Simple, easy to understand | Runtime errors only | Simple 2-step workflows |
+| **State Machine** | Clear state tracking, extensible | More code, runtime errors | Complex multi-step workflows |
+| **Fluent API** | **Compile-time safety**, elegant | More setup code needed | API design, fixed workflows |
+
+
+## Running Example
+
+
+Here's a complete console app you can try:
+
+```csharp
+using System;
+
+class Program
+{
+    static void Main()
+    {
+        Console.WriteLine("=== Approach 1: Boolean Flag ===");
+        var processor1 = new SimpleProcessor();
+        try
+        {
+            processor1.ProcessImages(); // ❌ Will throw
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        processor1.ValidateStudy();
+        processor1.ProcessImages(); // ✅ Now works
+
+        Console.WriteLine("\n=== Approach 3: Fluent API ===");
+        DicomStudyWorkflow.Create()
+            .ValidateStudy()
+            .ProcessImages()
+            .GenerateReport();
+    }
+}
+
+public class SimpleProcessor
+{
+    private bool _isValidated = false;
+
+    public void ValidateStudy()
+    {
+        Console.WriteLine("Validating...");
+        _isValidated = true;
+    }
+
+    public void ProcessImages()
+    {
+        if (!_isValidated)
+            throw new InvalidOperationException("Must validate first!");
+        Console.WriteLine("Processing...");
+    }
+}
+
+// (Add the fluent API code from above)
+```
+
+
+## Python Comparison
+
+
+In Python, you'd typically use a similar boolean flag approach:
+
+```python
+class DicomProcessor:
+    def __init__(self):
+        self._validated = False
+    
+    def validate_study(self):
+        self._validated = True
+    
+    def process_images(self):
+        if not self._validated:
+            raise RuntimeError("Must validate first!")
+        # Process...
+```
+
+**Key difference:** C#'s type system allows the **Fluent API approach** with compile-time enforcement, which is harder to achieve in Python.
+
+
+## My Recommendation
+
+
+- **Start with Approach 1** (boolean flag) for learning
+- **Use Approach 2** (state machine) for production code with complex workflows  
+- **Use Approach 3** (fluent API) when designing public APIs or libraries
