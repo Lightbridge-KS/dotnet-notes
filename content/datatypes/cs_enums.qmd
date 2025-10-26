@@ -1,0 +1,402 @@
+# C# Enum Cheatsheet
+
+
+## What is an Enum?
+
+
+An **Enum** (enumeration) is a value type that defines a set of named constants. It makes code more readable and type-safe.
+
+```
+Regular Code:          With Enum:
+┌──────────────┐      ┌──────────────┐
+│ int status=1 │  →   │ Status.Active│
+│ int status=2 │  →   │ Status.Paused│
+│ int status=3 │  →   │ Status.Closed│
+└──────────────┘      └──────────────┘
+   Hard to read          Self-documenting
+```
+
+
+```
+YourApp.sln
+│
+├── src/
+│   ├── YourApp.Core/              ← Domain/Business Logic
+│   │   ├── Entities/
+│   │   ├── Enums/                 ← ✓ Enums here!
+│   │   ├── Interfaces/
+│   │   └── Exceptions/
+│   │
+│   ├── YourApp.Application/       ← Use Cases/Services
+│   ├── YourApp.Infrastructure/    ← External concerns
+│   └── YourApp.API/               ← Entry point
+│
+└── tests/
+```
+
+
+## Basic Declaration
+
+
+```csharp
+// Simple enum (default: starts at 0)
+enum DayOfWeek
+{
+    Monday,    // 0
+    Tuesday,   // 1
+    Wednesday, // 2
+    Thursday,  // 3
+    Friday,    // 4
+    Saturday,  // 5
+    Sunday     // 6
+}
+
+// With explicit values
+enum HttpStatusCode
+{
+    OK = 200,
+    BadRequest = 400,
+    Unauthorized = 401,
+    NotFound = 404,
+    InternalServerError = 500
+}
+
+// Mixed (explicit + auto-increment)
+enum Priority
+{
+    Low = 1,
+    Medium,     // 2 (auto)
+    High,       // 3 (auto)
+    Critical = 10
+}
+```
+
+
+## Underlying Types
+
+
+By default, enums use `int`, but you can specify other integral types:
+
+```csharp
+enum Size : byte    // byte, sbyte, short, ushort, int, uint, long, ulong
+{
+    Small = 1,
+    Medium = 2,
+    Large = 3
+}
+
+// Memory diagram:
+// int enum:  4 bytes ████
+// byte enum: 1 byte  █
+```
+
+
+## Using Enums
+
+
+```csharp
+// Declaration and assignment
+DayOfWeek today = DayOfWeek.Monday;
+
+// Comparison
+if (today == DayOfWeek.Monday)
+{
+    Console.WriteLine("Start of work week!");
+}
+
+// Switch statement (recommended)
+switch (today)
+{
+    case DayOfWeek.Saturday:
+    case DayOfWeek.Sunday:
+        Console.WriteLine("Weekend!");
+        break;
+    default:
+        Console.WriteLine("Weekday");
+        break;
+}
+
+// Switch expression (C# 8.0+)
+string dayType = today switch
+{
+    DayOfWeek.Saturday or DayOfWeek.Sunday => "Weekend",
+    _ => "Weekday"
+};
+```
+
+
+## Conversion Operations
+
+
+```csharp
+// Enum to int
+int value = (int)DayOfWeek.Monday;  // 0
+
+// Int to enum
+DayOfWeek day = (DayOfWeek)3;  // Thursday
+
+// String to enum (parsing)
+DayOfWeek parsed = Enum.Parse<DayOfWeek>("Monday");
+
+// Try parse (safer)
+if (Enum.TryParse<DayOfWeek>("Friday", out DayOfWeek result))
+{
+    Console.WriteLine($"Parsed: {result}");
+}
+
+// Enum to string
+string name = DayOfWeek.Monday.ToString();  // "Monday"
+```
+
+
+## Common Enum Methods
+
+
+```csharp
+// Get all values
+DayOfWeek[] allDays = Enum.GetValues<DayOfWeek>();
+
+// Get all names
+string[] dayNames = Enum.GetNames<DayOfWeek>();
+
+// Check if value is defined
+bool isValid = Enum.IsDefined(typeof(DayOfWeek), 3);  // true
+bool isInvalid = Enum.IsDefined(typeof(DayOfWeek), 99);  // false
+
+// Get name from value
+string name = Enum.GetName(typeof(DayOfWeek), 0);  // "Monday"
+
+// Iterate through enum
+foreach (DayOfWeek day in Enum.GetValues<DayOfWeek>())
+{
+    Console.WriteLine($"{day} = {(int)day}");
+}
+```
+
+
+## Flags Enum (Bit Flags)
+
+
+Use `[Flags]` attribute for enums that can be combined:
+
+```csharp
+[Flags]
+enum FilePermissions
+{
+    None = 0,      // 0000
+    Read = 1,      // 0001
+    Write = 2,     // 0010
+    Execute = 4,   // 0100
+    Delete = 8     // 1000
+}
+
+// Combining flags (bitwise OR)
+FilePermissions userPerms = FilePermissions.Read | FilePermissions.Write;
+
+// Checking flags (bitwise AND)
+bool canRead = (userPerms & FilePermissions.Read) == FilePermissions.Read;
+bool canExecute = userPerms.HasFlag(FilePermissions.Execute);  // false
+
+// Adding flags
+userPerms |= FilePermissions.Execute;
+
+// Removing flags
+userPerms &= ~FilePermissions.Write;
+
+// Visual representation:
+//     Read | Write | Execute
+//     ──────────────────────
+//      1   |   1   |    0     = Read + Write
+```
+
+
+## Flags Best Practices
+
+
+```csharp
+[Flags]
+enum AccessRights
+{
+    None = 0,
+    Read = 1 << 0,    // 1   (bit 0)
+    Write = 1 << 1,   // 2   (bit 1)
+    Execute = 1 << 2, // 4   (bit 2)
+    Delete = 1 << 3,  // 8   (bit 3)
+    
+    // Combinations
+    ReadWrite = Read | Write,
+    FullAccess = Read | Write | Execute | Delete
+}
+
+// Using bit shift makes it clear and maintainable:
+// 1 << 0  →  00001
+// 1 << 1  →  00010
+// 1 << 2  →  00100
+// 1 << 3  →  01000
+```
+
+
+## Extension Methods for Enums
+
+
+```csharp
+public static class EnumExtensions
+{
+    // Get description from enum
+    public static string GetDescription(this Enum value)
+    {
+        var field = value.GetType().GetField(value.ToString());
+        var attribute = field?.GetCustomAttribute<DescriptionAttribute>();
+        return attribute?.Description ?? value.ToString();
+    }
+}
+
+// Usage with Description attribute
+enum OrderStatus
+{
+    [Description("Order is pending")]
+    Pending,
+    
+    [Description("Order is being processed")]
+    Processing,
+    
+    [Description("Order has been shipped")]
+    Shipped
+}
+
+string desc = OrderStatus.Pending.GetDescription();
+```
+
+
+## Common Patterns
+
+
+### 1. State Machine Pattern
+
+```csharp
+enum OrderState
+{
+    Created,
+    Paid,
+    Shipped,
+    Delivered,
+    Cancelled
+}
+
+class Order
+{
+    public OrderState State { get; private set; }
+    
+    public void ProcessPayment()
+    {
+        if (State == OrderState.Created)
+            State = OrderState.Paid;
+    }
+    
+    public void Ship()
+    {
+        if (State == OrderState.Paid)
+            State = OrderState.Shipped;
+    }
+}
+
+// State flow:
+// Created → Paid → Shipped → Delivered
+//    ↓
+// Cancelled
+```
+
+
+### 2. Configuration/Options Pattern
+
+```csharp
+enum LogLevel
+{
+    Trace = 0,
+    Debug = 1,
+    Info = 2,
+    Warning = 3,
+    Error = 4,
+    Critical = 5
+}
+
+void Log(string message, LogLevel level = LogLevel.Info)
+{
+    if (level >= LogLevel.Warning)
+    {
+        // Log to file
+    }
+}
+```
+
+
+## Common Pitfalls & Solutions
+
+
+```csharp
+// ❌ WRONG: Invalid enum value (no compiler error!)
+DayOfWeek invalid = (DayOfWeek)999;
+
+// ✅ CORRECT: Always validate
+if (Enum.IsDefined(typeof(DayOfWeek), dayValue))
+{
+    var day = (DayOfWeek)dayValue;
+}
+
+// ❌ WRONG: Comparing strings directly
+if (day.ToString() == "monday")  // Case-sensitive!
+
+// ✅ CORRECT: Use proper parsing
+if (Enum.TryParse<DayOfWeek>("monday", true, out var parsed))
+{
+    // ignoreCase = true
+}
+
+// ❌ WRONG: Flags without [Flags] attribute
+enum BadFlags { A = 1, B = 2, C = 4 }
+var combo = BadFlags.A | BadFlags.B;
+Console.WriteLine(combo);  // Prints "3" (confusing!)
+
+// ✅ CORRECT: With [Flags] attribute
+[Flags]
+enum GoodFlags { A = 1, B = 2, C = 4 }
+var combo2 = GoodFlags.A | GoodFlags.B;
+Console.WriteLine(combo2);  // Prints "A, B" (clear!)
+```
+
+
+## Quick Reference Table
+
+
+| Operation | Syntax | Example |
+|-----------|--------|---------|
+| Declare | `enum Name { ... }` | `enum Color { Red, Green }` |
+| Assign | `EnumType var = EnumType.Value` | `Color c = Color.Red` |
+| To int | `(int)enumValue` | `int x = (int)Color.Red` |
+| From int | `(EnumType)intValue` | `Color c = (Color)1` |
+| Parse | `Enum.Parse<T>("Name")` | `Enum.Parse<Color>("Red")` |
+| Try parse | `Enum.TryParse<T>("Name", out var)` | `TryParse<Color>("Red", out c)` |
+| Has flag | `value.HasFlag(flag)` | `perms.HasFlag(Read)` |
+| Add flag | `value \|= flag` | `perms \|= Write` |
+| Remove flag | `value &= ~flag` | `perms &= ~Execute` |
+
+
+## Best Practices Summary
+
+
+```
+DO:
+  ✓ Use enums for fixed sets of related constants
+  ✓ Use [Flags] for combinable values
+  ✓ Use power of 2 for flags (1, 2, 4, 8...)
+  ✓ Include None = 0 for flags enums
+  ✓ Validate enum values from external sources
+  ✓ Use meaningful names
+  
+DON'T:
+  ✗ Use magic numbers instead of enums
+  ✗ Change enum values after deployment
+  ✗ Forget [Flags] attribute for bit flags
+  ✗ Trust unchecked casts from int
+  ✗ Compare enum.ToString() directly
+```
