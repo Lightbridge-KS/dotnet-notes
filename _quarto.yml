@@ -65,6 +65,10 @@ book:
       chapters: 
         - "content/models/model_DTO_table.qmd"
         - "content/models/webapi_controller-vs-minimal.qmd"
+    - part: Blazor
+      chapters: 
+        - "content/blazor/basic/blazor-repo-architect.qmd"
+        - "content/blazor/basic/razor-syntax.qmd"
 
 format:
   html:
