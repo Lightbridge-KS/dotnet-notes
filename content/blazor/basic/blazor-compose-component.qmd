@@ -28,7 +28,7 @@ Blazor components compose just like Flutter widgets! You build larger components
 ```
 
 
-## 1. Basic Component Usage
+## Basic Component Usage
 
 
 ### Child Component: `ProductCard.razor`
@@ -55,7 +55,7 @@ Blazor components compose just like Flutter widgets! You build larger components
 ```
 
 
-## 2. Passing Data with Parameters
+## Passing Data with Parameters
 
 
 Think of `[Parameter]` like Flutter's constructor parameters or React props.
@@ -117,7 +117,7 @@ Think of `[Parameter]` like Flutter's constructor parameters or React props.
 ```
 
 
-## 3. Child Content (Slot Pattern)
+## Child Content (Slot Pattern)
 
 
 Like Flutter's `children` property or React's `{children}`. Use `RenderFragment` for flexible content.
@@ -128,19 +128,19 @@ Data Flow Patterns
 ──────────────────
 
 Pattern 1: Parameters (Parent → Child)
-┌────────┐
+┌────────┐                  ┌───────┐
 │ Parent │ ──[Parameter]──> │ Child │
 └────────┘                  └───────┘
 
 Pattern 2: Events (Child → Parent)
-┌────────┐
+┌────────┐                      ┌───────┐
 │ Parent │ <──[EventCallback]── │ Child │
-└────────┘                       └───────┘
+└────────┘                      └───────┘
 
 Pattern 3: Child Content (Parent provides markup)
-┌────────┐
+┌────────┐                     ┌───────┐
 │ Parent │ ──[ChildContent]──> │ Child │
-└────────┘                      └───────┘
+└────────┘                     └───────┘
 ```
 
 
@@ -199,7 +199,7 @@ Pattern 3: Child Content (Parent provides markup)
 ```
 
 
-## 4. Event Callbacks (Child to Parent Communication)
+## Event Callbacks (Child to Parent Communication)
 
 
 Like Flutter's callback functions `onPressed: () { }`.
@@ -274,7 +274,7 @@ Like Flutter's callback functions `onPressed: () { }`.
 ```
 
 
-## 5. Cascading Parameters (Deep Hierarchy)
+## Cascading Parameters (Deep Hierarchy)
 
 
 For passing data through multiple levels without prop drilling (like Flutter's InheritedWidget or React Context).
@@ -336,7 +336,7 @@ App (provides theme)
 ```
 
 
-## 6. Complete Real-World Example
+## Complete Real-World Example
 
 
 ### Small Components
