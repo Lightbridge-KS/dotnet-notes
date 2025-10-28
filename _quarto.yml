@@ -69,6 +69,7 @@ book:
       chapters: 
         - "content/blazor/basic/blazor-repo-architect.qmd"
         - "content/blazor/basic/razor-syntax.qmd"
+        - "content/blazor/basic/blazor-compose-component.qmd"
 
 format:
   html:

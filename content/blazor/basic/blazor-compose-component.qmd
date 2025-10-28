@@ -1,0 +1,534 @@
+# Component Composition in Blazor
+
+
+Blazor components compose just like Flutter widgets! You build larger components by nesting smaller ones.
+
+
+## Component Hierarchy
+
+
+```
+┌─────────────────────────────────────┐
+│         App.razor                   │
+│  ┌───────────────────────────────┐  │
+│  │     MainLayout.razor          │  │
+│  │  ┌─────────────────────────┐  │  │
+│  │  │   ProductList.razor     │  │  │
+│  │  │  ┌─────────────────┐    │  │  │
+│  │  │  │ProductCard.razor│    │  │  │
+│  │  │  │  - Name         │    │  │  │
+│  │  │  │  - Price        │    │  │  │
+│  │  │  │  - Button       │    │  │  │
+│  │  │  └─────────────────┘    │  │  │
+│  │  │  └─────────────────┘    │  │  │
+│  │  │  └─────────────────┘    │  │  │
+│  │  └─────────────────────────┘  │  │
+│  └───────────────────────────────┘  │
+└─────────────────────────────────────┘
+```
+
+
+## 1. Basic Component Usage
+
+
+### Child Component: `ProductCard.razor`
+
+```razor
+<div class="card">
+    <h4>Product Name</h4>
+    <p>$99.99</p>
+</div>
+```
+
+
+### Parent Component: Using the Child
+
+```razor
+@page "/products"
+
+<h2>Our Products</h2>
+
+<!-- Use component like an HTML tag -->
+<ProductCard />
+<ProductCard />
+<ProductCard />
+```
+
+
+## 2. Passing Data with Parameters
+
+
+Think of `[Parameter]` like Flutter's constructor parameters or React props.
+
+
+### Child Component with Parameters
+
+```razor
+<!-- ProductCard.razor -->
+
+<div class="card">
+    <h4>@Name</h4>
+    <p>@Price.ToString("C")</p>
+    <p>@Description</p>
+</div>
+
+@code {
+    [Parameter]
+    public string Name { get; set; } = "";
+    
+    [Parameter]
+    public decimal Price { get; set; }
+    
+    [Parameter]
+    public string Description { get; set; } = "";
+}
+```
+
+
+### Parent Component: Passing Data
+
+```razor
+<!-- ProductList.razor -->
+
+<div class="product-grid">
+    <ProductCard 
+        Name="Laptop" 
+        Price="1299.99m" 
+        Description="High-performance laptop" />
+    
+    <ProductCard 
+        Name="Mouse" 
+        Price="29.99m" 
+        Description="Wireless mouse" />
+    
+    <!-- Or loop through data -->
+    @foreach (var product in products)
+    {
+        <ProductCard 
+            Name="@product.Name"
+            Price="@product.Price"
+            Description="@product.Description" />
+    }
+</div>
+
+@code {
+    private List<Product> products = new();
+}
+```
+
+
+## 3. Child Content (Slot Pattern)
+
+
+Like Flutter's `children` property or React's `{children}`. Use `RenderFragment` for flexible content.
+
+
+```
+Data Flow Patterns
+──────────────────
+
+Pattern 1: Parameters (Parent → Child)
+┌────────┐
+│ Parent │ ──[Parameter]──> │ Child │
+└────────┘                  └───────┘
+
+Pattern 2: Events (Child → Parent)
+┌────────┐
+│ Parent │ <──[EventCallback]── │ Child │
+└────────┘                       └───────┘
+
+Pattern 3: Child Content (Parent provides markup)
+┌────────┐
+│ Parent │ ──[ChildContent]──> │ Child │
+└────────┘                      └───────┘
+```
+
+
+### Child Component with ChildContent
+
+```razor
+<!-- Card.razor -->
+
+<div class="card @CssClass">
+    <div class="card-header">
+        @HeaderContent
+    </div>
+    <div class="card-body">
+        @ChildContent
+    </div>
+    @if (FooterContent != null)
+    {
+        <div class="card-footer">
+            @FooterContent
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+    
+    [Parameter]
+    public RenderFragment? HeaderContent { get; set; }
+    
+    [Parameter]
+    public RenderFragment? FooterContent { get; set; }
+    
+    [Parameter]
+    public string CssClass { get; set; } = "";
+}
+```
+
+
+### Using the Card Component
+
+```razor
+<Card CssClass="highlight">
+    <HeaderContent>
+        <h3>Product Details</h3>
+    </HeaderContent>
+    <ChildContent>
+        <p>This is the main content</p>
+        <img src="product.jpg" />
+        <button>Buy Now</button>
+    </ChildContent>
+    <FooterContent>
+        <small>Last updated: @DateTime.Now</small>
+    </FooterContent>
+</Card>
+```
+
+
+## 4. Event Callbacks (Child to Parent Communication)
+
+
+Like Flutter's callback functions `onPressed: () { }`.
+
+
+### Child Component: Button with Event
+
+```razor
+<!-- CounterButton.razor -->
+
+<button class="btn btn-primary" @onclick="HandleClick">
+    @Label (@Count)
+</button>
+
+@code {
+    [Parameter]
+    public string Label { get; set; } = "Click me";
+    
+    [Parameter]
+    public int Count { get; set; }
+    
+    [Parameter]
+    public EventCallback<int> OnCountChanged { get; set; }
+    
+    private async Task HandleClick()
+    {
+        Count++;
+        // Notify parent of the change
+        await OnCountChanged.InvokeAsync(Count);
+    }
+}
+```
+
+
+### Parent Component: Handling Events
+
+```razor
+<!-- Counter.razor -->
+@page "/counter"
+
+<h3>Counter Page</h3>
+
+<p>Total clicks: @totalClicks</p>
+
+<CounterButton 
+    Label="Button 1" 
+    Count="@count1" 
+    OnCountChanged="@HandleCount1Changed" />
+
+<CounterButton 
+    Label="Button 2" 
+    Count="@count2" 
+    OnCountChanged="@HandleCount2Changed" />
+
+@code {
+    private int count1 = 0;
+    private int count2 = 0;
+    private int totalClicks = 0;
+    
+    private void HandleCount1Changed(int newCount)
+    {
+        count1 = newCount;
+        totalClicks = count1 + count2;
+    }
+    
+    private void HandleCount2Changed(int newCount)
+    {
+        count2 = newCount;
+        totalClicks = count1 + count2;
+    }
+}
+```
+
+
+## 5. Cascading Parameters (Deep Hierarchy)
+
+
+For passing data through multiple levels without prop drilling (like Flutter's InheritedWidget or React Context).
+
+
+```
+Without Cascading (Prop Drilling)
+──────────────────────────────────
+App
+ ├─ theme ──> Page
+              ├─ theme ──> Section
+                           ├─ theme ──> Card
+                                        └─ Uses theme
+
+With Cascading (Direct Access)
+───────────────────────────────
+App (provides theme)
+ └─ Page
+     └─ Section
+         └─ Card (accesses theme directly)
+```
+
+
+### Providing Cascading Value
+
+```razor
+<!-- App.razor or MainLayout.razor -->
+
+<CascadingValue Value="@currentUser">
+    <CascadingValue Value="@theme">
+        @Body
+    </CascadingValue>
+</CascadingValue>
+
+@code {
+    private User currentUser = new() { Name = "John Doe" };
+    private Theme theme = new() { PrimaryColor = "blue" };
+}
+```
+
+
+### Consuming Cascading Value (Any Level Deep)
+
+```razor
+<!-- UserProfile.razor (deep in the tree) -->
+
+<div>
+    <p>Welcome, @CurrentUser.Name</p>
+    <p style="color: @Theme.PrimaryColor">Themed text</p>
+</div>
+
+@code {
+    [CascadingParameter]
+    public User CurrentUser { get; set; } = null!;
+    
+    [CascadingParameter]
+    public Theme Theme { get; set; } = null!;
+}
+```
+
+
+## 6. Complete Real-World Example
+
+
+### Small Components
+
+
+```razor
+<!-- Components/ProductImage.razor -->
+
+<div class="product-image">
+    <img src="@ImageUrl" alt="@Alt" />
+</div>
+
+@code {
+    [Parameter] public string ImageUrl { get; set; } = "";
+    [Parameter] public string Alt { get; set; } = "";
+}
+```
+
+```razor
+<!-- Components/PriceDisplay.razor -->
+
+<div class="price">
+    @if (OriginalPrice.HasValue && OriginalPrice > Price)
+    {
+        <span class="original-price">@OriginalPrice.Value.ToString("C")</span>
+    }
+    <span class="current-price">@Price.ToString("C")</span>
+    @if (Discount > 0)
+    {
+        <span class="discount">-@Discount%</span>
+    }
+</div>
+
+@code {
+    [Parameter] public decimal Price { get; set; }
+    [Parameter] public decimal? OriginalPrice { get; set; }
+    [Parameter] public int Discount { get; set; }
+}
+```
+
+```razor
+<!-- Components/AddToCartButton.razor -->
+
+<button class="btn-cart" @onclick="HandleClick" disabled="@IsLoading">
+    @if (IsLoading)
+    {
+        <span>Adding...</span>
+    }
+    else
+    {
+        <span>@Text</span>
+    }
+</button>
+
+@code {
+    [Parameter] public string Text { get; set; } = "Add to Cart";
+    [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    
+    private async Task HandleClick()
+    {
+        await OnClick.InvokeAsync();
+    }
+}
+```
+
+
+### Medium Component (Combines Small Ones)
+
+
+```razor
+<!-- Components/ProductCard.razor -->
+
+<div class="product-card">
+    <ProductImage 
+        ImageUrl="@Product.ImageUrl" 
+        Alt="@Product.Name" />
+    
+    <div class="product-info">
+        <h3>@Product.Name</h3>
+        <p>@Product.Description</p>
+        
+        <PriceDisplay 
+            Price="@Product.Price"
+            OriginalPrice="@Product.OriginalPrice"
+            Discount="@Product.DiscountPercent" />
+        
+        <AddToCartButton 
+            OnClick="@(() => OnAddToCart.InvokeAsync(Product))"
+            IsLoading="@isAdding" />
+    </div>
+</div>
+
+@code {
+    [Parameter] public Product Product { get; set; } = null!;
+    [Parameter] public EventCallback<Product> OnAddToCart { get; set; }
+    
+    private bool isAdding = false;
+}
+```
+
+
+### Large Component (Combines Medium Ones)
+
+
+```razor
+<!-- Pages/ProductList.razor -->
+@page "/products"
+@inject CartService CartService
+
+<div class="product-list-page">
+    <h1>Our Products</h1>
+    
+    @if (isLoading)
+    {
+        <p>Loading products...</p>
+    }
+    else
+    {
+        <div class="product-grid">
+            @foreach (var product in products)
+            {
+                <ProductCard 
+                    Product="@product"
+                    OnAddToCart="@HandleAddToCart" />
+            }
+        </div>
+    }
+    
+    @if (cartMessage != "")
+    {
+        <div class="toast">@cartMessage</div>
+    }
+</div>
+
+@code {
+    private List<Product> products = new();
+    private bool isLoading = true;
+    private string cartMessage = "";
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.Delay(500); // Simulate loading
+        products = GetSampleProducts();
+        isLoading = false;
+    }
+    
+    private async Task HandleAddToCart(Product product)
+    {
+        await CartService.AddItem(product);
+        cartMessage = $"Added {product.Name} to cart!";
+        
+        // Clear message after 3 seconds
+        await Task.Delay(3000);
+        cartMessage = "";
+        StateHasChanged();
+    }
+    
+    private List<Product> GetSampleProducts()
+    {
+        return new List<Product>
+        {
+            new() { Name = "Laptop", Price = 1299.99m, ImageUrl = "laptop.jpg" },
+            new() { Name = "Mouse", Price = 29.99m, ImageUrl = "mouse.jpg" }
+        };
+    }
+}
+```
+
+
+## Key Patterns Summary
+
+
+```
+Component Communication Patterns
+─────────────────────────────────
+
+1. [Parameter] - Pass data down
+   Parent ─[data]──> Child
+
+2. [EventCallback] - Send events up
+   Parent <─[event]── Child
+
+3. [ChildContent] - Custom markup
+   Parent ─[markup]──> Child
+
+4. [CascadingParameter] - Skip levels
+   Ancestor ╌╌╌[shared data]╌╌╌> Descendant
+
+5. @ref - Direct reference (use sparingly)
+   Parent ─[direct access]──> Child
+```
+
+
+This composition model is very similar to Flutter! Each component is self-contained, reusable, and communicates through well-defined interfaces. Start small, then combine them into larger features!
