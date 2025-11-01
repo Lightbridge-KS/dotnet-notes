@@ -1,0 +1,221 @@
+# Repo Architect for Test
+
+::: {.callout-note appearance="default" collapse="false"}
+**Q:** I will have a .NET solution with ClassLib and a controller-based WebAPI project. 
+
+```
+MyApp/
+- MyApp.sln
+- MyApp.Core/
+  - MyApp.Core.csproj
+- MyApp.API/
+  - MyApp.API.csproj
+```
+
+I want to write a unit test (using `xUnit`) for Business logic (Core) and also WebAPI. 
+
+How should I structure folders and project for testing?
+:::
+
+
+
+## Recommended Folder Structure
+
+
+```
+MyApp/
+├── src/
+│   ├── MyApp.Core/
+│   │   └── MyApp.Core.csproj
+│   └── MyApp.API/
+│       └── MyApp.API.csproj
+├── tests/
+│   ├── MyApp.Core.Tests/
+│   │   └── MyApp.Core.Tests.csproj
+│   └── MyApp.API.Tests/
+│       └── MyApp.API.Tests.csproj
+└── MyApp.sln
+```
+
+
+## Key Principles
+
+
+**1. Separate `src/` and `tests/` folders** - This clearly distinguishes production code from test code.
+
+**2. Mirror the project structure** - Each project under test gets its own test project with a `.Tests` suffix.
+
+**3. Naming convention**: `<ProjectName>.Tests` or `<ProjectName>.UnitTests`
+
+
+## Types of Tests for Each Project
+
+
+```
+MyApp.Core.Tests/
+├── Unit Tests
+│   └── Test individual classes, methods
+│   └── Mock dependencies
+│   └── Fast, isolated tests
+│
+Example:
+├── Services/
+│   ├── UserServiceTests.cs
+│   └── OrderServiceTests.cs
+└── Models/
+    └── UserModelTests.cs
+```
+
+```
+MyApp.API.Tests/
+├── Unit Tests (Controller logic)
+│   └── Test controller methods directly
+│   └── Mock services/dependencies
+│
+├── Integration Tests (optional)
+│   └── Test full HTTP pipeline
+│   └── Use WebApplicationFactory
+│
+Example:
+├── Controllers/
+│   └── UsersControllerTests.cs
+└── Integration/  (optional)
+    └── UsersApiTests.cs
+```
+
+
+## Setting Up the Test Projects
+
+
+Here are the commands to create your test structure:
+
+```bash
+# Create the folder structure
+mkdir -p src tests
+
+# Move existing projects (if needed)
+mv MyApp.Core src/
+mv MyApp.API src/
+
+# Create test projects
+dotnet new xunit -n MyApp.Core.Tests -o tests/MyApp.Core.Tests
+dotnet new xunit -n MyApp.API.Tests -o tests/MyApp.API.Tests
+
+# Add test projects to solution
+dotnet sln add tests/MyApp.Core.Tests/MyApp.Core.Tests.csproj
+dotnet sln add tests/MyApp.API.Tests/MyApp.API.Tests.csproj
+
+# Add project references (test projects need to reference the projects they test)
+dotnet add tests/MyApp.Core.Tests reference src/MyApp.Core/MyApp.Core.csproj
+dotnet add tests/MyApp.API.Tests reference src/MyApp.API/MyApp.API.csproj
+```
+
+
+## Essential NuGet Packages for Testing
+
+
+For **MyApp.Core.Tests**:
+```bash
+cd tests/MyApp.Core.Tests
+
+# Mocking framework
+dotnet add package Moq
+
+# Assertion library (optional, but popular)
+dotnet add package FluentAssertions
+```
+
+For **MyApp.API.Tests**:
+```bash
+cd tests/MyApp.API.Tests
+
+# For API integration tests
+dotnet add package Microsoft.AspNetCore.Mvc.Testing
+
+# Mocking framework
+dotnet add package Moq
+
+# Assertion library
+dotnet add package FluentAssertions
+```
+
+
+## Example Test File Structure
+
+
+**MyApp.Core.Tests** might look like:
+```
+MyApp.Core.Tests/
+├── Services/
+│   ├── UserServiceTests.cs
+│   └── ProductServiceTests.cs
+├── Validators/
+│   └── EmailValidatorTests.cs
+└── Helpers/
+    └── StringHelperTests.cs
+```
+
+**MyApp.API.Tests** might look like:
+```
+MyApp.API.Tests/
+├── Controllers/
+│   ├── UsersControllerTests.cs
+│   └── ProductsControllerTests.cs
+├── Integration/
+│   ├── UsersApiIntegrationTests.cs
+│   └── ProductsApiIntegrationTests.cs
+└── Fixtures/
+    └── WebApplicationFactory.cs
+```
+
+
+## Quick Example
+
+
+Here's a simple test example for Core:
+
+```csharp
+// tests/MyApp.Core.Tests/Services/UserServiceTests.cs
+using Xunit;
+using Moq;
+using FluentAssertions;
+
+namespace MyApp.Core.Tests.Services;
+
+public class UserServiceTests
+{
+    [Fact]
+    public void GetUser_WhenUserExists_ReturnsUser()
+    {
+        // Arrange
+        var mockRepo = new Mock<IUserRepository>();
+        mockRepo.Setup(r => r.GetById(1)).Returns(new User { Id = 1, Name = "John" });
+        var service = new UserService(mockRepo.Object);
+
+        // Act
+        var result = service.GetUser(1);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Name.Should().Be("John");
+    }
+}
+```
+
+
+## Running Tests
+
+
+```bash
+# Run all tests
+dotnet test
+
+# Run tests for specific project
+dotnet test tests/MyApp.Core.Tests
+
+# Run with detailed output
+dotnet test --logger "console;verbosity=detailed"
+
+# Run tests and generate coverage report
+dotnet test --collect:"XPlat Code Coverage"
+```
