@@ -1,0 +1,600 @@
+# xUnit.net Cheatsheet
+
+
+## Project Setup
+
+
+```bash
+# Create test project
+dotnet new xunit -n MyProject.Tests
+
+# Add reference to project under test
+dotnet add reference ../MyProject/MyProject.csproj
+
+# Add additional packages
+dotnet add package Moq              # Mocking
+dotnet add package FluentAssertions # Better assertions
+```
+
+
+## Test Attributes
+
+
+```csharp
+// Single test case
+[Fact]
+public void TestMethod() { }
+
+// Parameterized test
+[Theory]
+[InlineData(1, 2, 3)]
+[InlineData(5, 5, 10)]
+public void TestMethod(int a, int b, int expected) { }
+
+// Skip test
+[Fact(Skip = "Not implemented yet")]
+public void TestMethod() { }
+
+// Categorize test
+[Trait("Category", "Unit")]
+[Trait("Priority", "High")]
+public void TestMethod() { }
+
+// Async test
+[Fact]
+public async Task TestMethodAsync() { }
+```
+
+
+## Test Data Sources
+
+
+```csharp
+// 1. InlineData - Simple inline values
+[Theory]
+[InlineData(1, 2, 3)]
+[InlineData(5, 5, 10)]
+public void Add(int a, int b, int expected) { }
+
+// 2. MemberData - From property or method
+public static IEnumerable<object[]> TestData =>
+    new List<object[]> {
+        new object[] { 1, 2, 3 },
+        new object[] { 5, 5, 10 }
+    };
+
+[Theory]
+[MemberData(nameof(TestData))]
+public void Add(int a, int b, int expected) { }
+
+// 3. ClassData - From separate class
+public class TestDataClass : IEnumerable<object[]>
+{
+    public IEnumerator<object[]> GetEnumerator()
+    {
+        yield return new object[] { 1, 2, 3 };
+        yield return new object[] { 5, 5, 10 };
+    }
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+}
+
+[Theory]
+[ClassData(typeof(TestDataClass))]
+public void Add(int a, int b, int expected) { }
+```
+
+
+## Common Assertions
+
+
+### Equality
+
+```csharp
+Assert.Equal(expected, actual);
+Assert.NotEqual(expected, actual);
+Assert.StrictEqual(expected, actual);  // Reference equality
+
+// With tolerance
+Assert.Equal(3.14, 3.1416, precision: 2);
+
+// String comparison
+Assert.Equal("hello", "HELLO", ignoreCase: true);
+```
+
+
+### Boolean
+
+```csharp
+Assert.True(condition);
+Assert.False(condition);
+```
+
+
+### Null
+
+```csharp
+Assert.Null(obj);
+Assert.NotNull(obj);
+```
+
+
+### Collections
+
+```csharp
+Assert.Contains(item, collection);
+Assert.DoesNotContain(item, collection);
+Assert.Empty(collection);
+Assert.NotEmpty(collection);
+Assert.Single(collection);  // Exactly one element
+Assert.Collection(collection,
+    item => Assert.Equal(1, item),
+    item => Assert.Equal(2, item)
+);
+```
+
+
+### Strings
+
+```csharp
+Assert.StartsWith("prefix", str);
+Assert.EndsWith("suffix", str);
+Assert.Contains("substring", str);
+Assert.Matches(@"\d{3}-\d{4}", str);  // Regex
+```
+
+
+### Types
+
+```csharp
+Assert.IsType<string>(obj);
+Assert.IsNotType<int>(obj);
+Assert.IsAssignableFrom<IEnumerable>(obj);
+```
+
+
+### Ranges
+
+```csharp
+Assert.InRange(value, low, high);
+Assert.NotInRange(value, low, high);
+```
+
+
+### Exceptions
+
+```csharp
+Assert.Throws<DivideByZeroException>(() => method());
+Assert.ThrowsAny<Exception>(() => method());
+
+// With message validation
+var ex = Assert.Throws<ArgumentException>(() => method());
+Assert.Equal("Expected message", ex.Message);
+```
+
+
+## AAA Pattern (Arrange-Act-Assert)
+
+
+```csharp
+[Fact]
+public void TestMethod()
+{
+    // Arrange - Setup test data & dependencies
+    var sut = new SystemUnderTest();
+    var input = "test";
+    
+    // Act - Execute the method being tested
+    var result = sut.Method(input);
+    
+    // Assert - Verify the result
+    Assert.Equal("expected", result);
+}
+```
+
+
+## Fixtures (Setup & Teardown)
+
+
+### Per-Test Fixture
+
+```csharp
+public class MyTests : IDisposable
+{
+    private readonly MyClass _sut;
+    
+    // Runs BEFORE each test
+    public MyTests()
+    {
+        _sut = new MyClass();
+    }
+    
+    // Runs AFTER each test
+    public void Dispose()
+    {
+        // Cleanup
+    }
+    
+    [Fact]
+    public void Test1() { }
+    
+    [Fact]
+    public void Test2() { }
+}
+
+// Execution: Constructor → Test1 → Dispose
+//            Constructor → Test2 → Dispose
+```
+
+
+### Class Fixture (Shared in One Test Class)
+
+```csharp
+public class DatabaseFixture : IDisposable
+{
+    public string Connection { get; }
+    
+    public DatabaseFixture()
+    {
+        // Expensive setup (once)
+        Connection = "connection_string";
+    }
+    
+    public void Dispose()
+    {
+        // Cleanup (once)
+    }
+}
+
+public class MyTests : IClassFixture<DatabaseFixture>
+{
+    private readonly DatabaseFixture _fixture;
+    
+    public MyTests(DatabaseFixture fixture)
+    {
+        _fixture = fixture;
+    }
+    
+    [Fact]
+    public void Test1() { }
+    
+    [Fact]
+    public void Test2() { }
+}
+
+// Execution: DatabaseFixture Constructor
+//            → Test1
+//            → Test2
+//            → DatabaseFixture Dispose
+```
+
+
+### Collection Fixture (Shared Across Multiple Test Classes)
+
+```csharp
+// 1. Define fixture
+public class SharedResourceFixture : IDisposable
+{
+    public string Resource { get; }
+    public SharedResourceFixture() { /* setup */ }
+    public void Dispose() { /* cleanup */ }
+}
+
+// 2. Define collection
+[CollectionDefinition("Shared collection")]
+public class SharedCollection : ICollectionFixture<SharedResourceFixture> { }
+
+// 3. Use in test classes
+[Collection("Shared collection")]
+public class TestClass1
+{
+    private readonly SharedResourceFixture _fixture;
+    public TestClass1(SharedResourceFixture fixture) 
+    { 
+        _fixture = fixture; 
+    }
+    
+    [Fact] public void Test1() { }
+}
+
+[Collection("Shared collection")]
+public class TestClass2
+{
+    private readonly SharedResourceFixture _fixture;
+    public TestClass2(SharedResourceFixture fixture) 
+    { 
+        _fixture = fixture; 
+    }
+    
+    [Fact] public void Test2() { }
+}
+```
+
+
+## Test Output
+
+
+```csharp
+public class MyTests
+{
+    private readonly ITestOutputHelper _output;
+    
+    public MyTests(ITestOutputHelper output)
+    {
+        _output = output;
+    }
+    
+    [Fact]
+    public void TestWithOutput()
+    {
+        _output.WriteLine("Debug information");
+        _output.WriteLine($"Value: {someValue}");
+    }
+}
+```
+
+
+## Async Tests
+
+
+```csharp
+[Fact]
+public async Task AsyncTest()
+{
+    var result = await SomeAsyncMethod();
+    Assert.Equal(expected, result);
+}
+
+[Theory]
+[InlineData(1)]
+[InlineData(2)]
+public async Task AsyncTheoryTest(int value)
+{
+    var result = await SomeAsyncMethod(value);
+    Assert.NotNull(result);
+}
+```
+
+
+## Running Tests
+
+
+```bash
+# Run all tests
+dotnet test
+
+# Detailed output
+dotnet test --logger "console;verbosity=detailed"
+
+# Filter tests
+dotnet test --filter "FullyQualifiedName~MyTests"
+dotnet test --filter "DisplayName~Add"
+dotnet test --filter "Category=Unit"
+
+# Run specific test
+dotnet test --filter "FullyQualifiedName~MyTests.TestMethod"
+
+# Watch mode (auto re-run)
+dotnet watch test
+
+# Code coverage
+dotnet test /p:CollectCoverage=true
+```
+
+
+## Test Naming Convention
+
+
+```
+Pattern: MethodName_Scenario_ExpectedBehavior
+
+✓ Good Examples:
+  Add_TwoPositiveNumbers_ReturnsSum
+  Divide_ByZero_ThrowsException
+  GetUser_InvalidId_ReturnsNull
+  SaveUser_ValidUser_ReturnsSavedUser
+
+✗ Bad Examples:
+  TestAdd
+  Test1
+  AddTest
+  MyTest
+```
+
+
+## Project Structure
+
+
+```
+Solution/
+├── MyProject/
+│   ├── MyProject.csproj
+│   └── Calculator.cs
+│
+└── MyProject.Tests/
+    ├── MyProject.Tests.csproj
+    ├── CalculatorTests.cs
+    └── Fixtures/
+        └── DatabaseFixture.cs
+
+Naming Convention:
+  Project: MyProject.Tests
+  Test Class: ClassNameTests
+  Test Method: MethodName_Scenario_Expected
+```
+
+
+## Quick Setup Template
+
+
+```csharp
+using Xunit;
+
+namespace MyProject.Tests;
+
+public class MyClassTests
+{
+    [Fact]
+    public void MethodName_Scenario_ExpectedResult()
+    {
+        // Arrange
+        var sut = new MyClass();
+        
+        // Act
+        var result = sut.Method();
+        
+        // Assert
+        Assert.NotNull(result);
+    }
+}
+```
+
+
+## Comparison Table
+
+
+```
+┌────────────────────┬──────────────┬─────────────────────┐
+│ Feature            │ Syntax       │ Use When            │
+├────────────────────┼──────────────┼─────────────────────┤
+│ Single test        │ [Fact]       │ One test case       │
+│ Multiple inputs    │ [Theory]     │ Same test, diff data│
+│ Inline data        │ [InlineData] │ Simple values       │
+│ Complex data       │ [MemberData] │ Complex objects     │
+│ Reusable data      │ [ClassData]  │ Share across tests  │
+│ Per-test setup     │ Constructor  │ Fresh state/test    │
+│ Shared setup       │ IClassFixture│ Expensive setup     │
+│ Multi-class shared │ ICollection  │ Share across classes│
+└────────────────────┴──────────────┴─────────────────────┘
+```
+
+
+## Common Patterns
+
+
+### Testing Exceptions
+
+```csharp
+[Fact]
+public void Method_InvalidInput_ThrowsException()
+{
+    Assert.Throws<ArgumentException>(() => Method(null));
+}
+```
+
+
+### Testing Async Exceptions
+
+```csharp
+[Fact]
+public async Task Method_InvalidInput_ThrowsException()
+{
+    await Assert.ThrowsAsync<ArgumentException>(
+        async () => await MethodAsync(null)
+    );
+}
+```
+
+
+### Testing Multiple Scenarios
+
+```csharp
+[Theory]
+[InlineData(0)]
+[InlineData(-1)]
+[InlineData(int.MinValue)]
+public void Method_InvalidInputs_ThrowsException(int input)
+{
+    Assert.Throws<ArgumentException>(() => Method(input));
+}
+```
+
+
+### Testing Private Methods
+
+```
+Don't test private methods directly.
+Instead:
+  1. Test through public methods
+  2. If needed, make method internal and use:
+     [assembly: InternalsVisibleTo("MyProject.Tests")]
+```
+
+
+## VS Code Tips
+
+
+```bash
+# Install .NET Core Test Explorer extension
+
+# Test Explorer shortcuts:
+Cmd+Shift+P → "Test: Run All Tests"
+Cmd+Shift+P → "Test: Debug All Tests"
+
+# Settings (settings.json):
+{
+  "dotnet-test-explorer.enableTelemetry": false,
+  "dotnet-test-explorer.autoWatch": true
+}
+```
+
+
+## Useful Packages
+
+
+```bash
+# Mocking
+dotnet add package Moq
+dotnet add package NSubstitute
+
+# Fluent Assertions
+dotnet add package FluentAssertions
+
+# Auto Fixture (test data generation)
+dotnet add package AutoFixture
+dotnet add package AutoFixture.Xunit2
+
+# Snapshot Testing
+dotnet add package Verify.Xunit
+
+# Bogus (fake data generation)
+dotnet add package Bogus
+```
+
+
+## Memory Aid
+
+
+```
+┌─────────────────────────────────────┐
+│  xUnit Testing Workflow             │
+├─────────────────────────────────────┤
+│  1. [Fact] or [Theory]              │
+│  2. Arrange (setup)                 │
+│  3. Act (execute)                   │
+│  4. Assert (verify)                 │
+│  5. dotnet test (run)               │
+└─────────────────────────────────────┘
+
+Test Lifecycle:
+  Constructor → Test → Dispose
+  (New instance per test!)
+
+Shared Resources:
+  IClassFixture      → One test class
+  ICollectionFixture → Multiple test classes
+```
+
+
+## Quick Checklist
+
+
+```
+✓ Test method name describes scenario
+✓ One Assert per test (or closely related asserts)
+✓ Tests are independent (can run in any order)
+✓ Tests are repeatable (same result every time)
+✓ Tests are fast (< 1 second)
+✓ No logic in tests (no if/for/while)
+✓ Use AAA pattern
+✓ Test both happy path and edge cases
+```

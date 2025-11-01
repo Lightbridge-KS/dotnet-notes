@@ -1,0 +1,1075 @@
+# xUnit.net Crash Course
+
+
+Great! Let's dive into unit testing with xUnit.net. I'll guide you through everything from setup to advanced testing patterns.
+
+
+## What is Unit Testing?
+
+
+Unit testing is testing individual "units" of code (usually methods or functions) in isolation to ensure they work correctly.
+
+```
+Traditional Development Flow:
+┌──────────┐    ┌──────────┐    ┌──────────┐
+│  Write   │───▶│  Build   │───▶│  Manual  │
+│   Code   │    │          │    │   Test   │
+└──────────┘    └──────────┘    └──────────┘
+                                      ▲
+                                      │
+                                 (Slow, Error-prone)
+
+Unit Testing Flow:
+┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
+│  Write   │───▶│  Write   │───▶│   Run    │───▶│  Build   │
+│   Code   │    │   Tests  │    │   Tests  │    │          │
+└──────────┘    └──────────┘    └──────────┘    └──────────┘
+                     ▲                │
+                     │                │
+                     └────(Fast)──────┘
+```
+
+
+## Why xUnit.net?
+
+
+xUnit.net is the most modern and widely-used testing framework for .NET. It's used by Microsoft for testing .NET Core itself!
+
+**xUnit vs Others:**
+- **NUnit**: Older, attribute-heavy
+- **MSTest**: Microsoft's original (less flexible)
+- **xUnit**: Modern, clean, and follows best practices
+
+
+## Setting Up xUnit.net
+
+
+### Step 1: Create a Solution Structure
+
+
+Let's create a practical example - a calculator library and its tests:
+
+```bash
+# Create a solution directory
+mkdir CalculatorApp
+cd CalculatorApp
+
+# Create a solution file
+dotnet new sln -n CalculatorApp
+
+# Create a class library (our code to test)
+dotnet new classlib -n Calculator
+
+# Create a xUnit test project
+dotnet new xunit -n Calculator.Tests
+
+# Add projects to solution
+dotnet sln add Calculator/Calculator.csproj
+dotnet sln add Calculator.Tests/Calculator.Tests.csproj
+
+# Add reference from test project to main project
+cd Calculator.Tests
+dotnet add reference ../Calculator/Calculator.csproj
+cd ..
+```
+
+**Your directory structure should look like:**
+
+```
+CalculatorApp/
+├── CalculatorApp.sln
+├── Calculator/
+│   ├── Calculator.csproj
+│   └── Class1.cs
+└── Calculator.Tests/
+    ├── Calculator.Tests.csproj
+    └── UnitTest1.cs
+```
+
+
+### Step 2: Verify xUnit Installation
+
+
+Open `Calculator.Tests/Calculator.Tests.csproj` - you should see:
+
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="..." />
+    <PackageReference Include="xunit" Version="..." />
+    <PackageReference Include="xunit.runner.visualstudio" Version="..." />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Calculator\Calculator.csproj" />
+  </ItemGroup>
+
+</Project>
+```
+
+
+## Anatomy of an xUnit Test
+
+
+```
+Test Class Structure:
+┌─────────────────────────────────────────┐
+│  public class CalculatorTests           │
+│  {                                      │
+│    [Fact]  ◄─── Test Attribute          │
+│    public void Add_TwoNumbers_Returns   │
+│                Sum()                    │
+│    {                                    │
+│      // Arrange ◄─── Setup              │
+│      var calc = new Calculator();       │
+│      int a = 5, b = 3;                  │
+│                                         │
+│      // Act ◄─── Execute                │
+│      var result = calc.Add(a, b);       │
+│                                         │
+│      // Assert ◄─── Verify              │
+│      Assert.Equal(8, result);           │
+│    }                                    │
+│  }                                      │
+└─────────────────────────────────────────┘
+```
+
+
+## Writing Your First Tests
+
+
+### Step 1: Create the Calculator Class
+
+
+Edit `Calculator/Class1.cs`:
+
+```csharp
+namespace Calculator;
+
+public class Calculator
+{
+    public int Add(int a, int b)
+    {
+        return a + b;
+    }
+
+    public int Subtract(int a, int b)
+    {
+        return a - b;
+    }
+
+    public int Multiply(int a, int b)
+    {
+        return a * b;
+    }
+
+    public double Divide(int a, int b)
+    {
+        if (b == 0)
+            throw new DivideByZeroException("Cannot divide by zero");
+        
+        return (double)a / b;
+    }
+
+    public bool IsEven(int number)
+    {
+        return number % 2 == 0;
+    }
+}
+```
+
+
+### Step 2: Write Basic Tests
+
+
+Edit `Calculator.Tests/UnitTest1.cs` (or rename it to `CalculatorTests.cs`):
+
+```csharp
+namespace Calculator.Tests;
+
+public class CalculatorTests
+{
+    // [Fact] = A test that doesn't take parameters
+    [Fact]
+    public void Add_TwoPositiveNumbers_ReturnsSum()
+    {
+        // Arrange
+        var calculator = new Calculator();
+        int a = 5;
+        int b = 3;
+
+        // Act
+        var result = calculator.Add(a, b);
+
+        // Assert
+        Assert.Equal(8, result);
+    }
+
+    [Fact]
+    public void Add_NegativeNumbers_ReturnsCorrectSum()
+    {
+        // Arrange
+        var calculator = new Calculator();
+
+        // Act
+        var result = calculator.Add(-5, -3);
+
+        // Assert
+        Assert.Equal(-8, result);
+    }
+
+    [Fact]
+    public void Subtract_TwoNumbers_ReturnsDifference()
+    {
+        // Arrange
+        var calculator = new Calculator();
+
+        // Act
+        var result = calculator.Subtract(10, 3);
+
+        // Assert
+        Assert.Equal(7, result);
+    }
+
+    [Fact]
+    public void Multiply_TwoNumbers_ReturnsProduct()
+    {
+        // Arrange
+        var calculator = new Calculator();
+
+        // Act
+        var result = calculator.Multiply(4, 5);
+
+        // Assert
+        Assert.Equal(20, result);
+    }
+
+    [Fact]
+    public void Divide_TwoNumbers_ReturnsQuotient()
+    {
+        // Arrange
+        var calculator = new Calculator();
+
+        // Act
+        var result = calculator.Divide(10, 2);
+
+        // Assert
+        Assert.Equal(5.0, result);
+    }
+
+    [Fact]
+    public void Divide_ByZero_ThrowsException()
+    {
+        // Arrange
+        var calculator = new Calculator();
+
+        // Act & Assert
+        Assert.Throws<DivideByZeroException>(() => calculator.Divide(10, 0));
+    }
+}
+```
+
+
+### Step 3: Run the Tests
+
+
+```bash
+# Run all tests in the solution
+dotnet test
+
+# Run tests with detailed output
+dotnet test --logger "console;verbosity=detailed"
+
+# Run tests in a specific project
+dotnet test Calculator.Tests/Calculator.Tests.csproj
+```
+
+**Expected output:**
+
+```
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:     6, Skipped:     0, Total:     6
+```
+
+
+## Common xUnit Assertions
+
+
+```csharp
+public class AssertionExamples
+{
+    [Fact]
+    public void Equality_Assertions()
+    {
+        // Exact equality
+        Assert.Equal(5, 5);
+        Assert.NotEqual(5, 3);
+
+        // String equality (case-sensitive)
+        Assert.Equal("hello", "hello");
+        
+        // String equality (case-insensitive)
+        Assert.Equal("hello", "HELLO", ignoreCase: true);
+
+        // Floating point comparison (with tolerance)
+        Assert.Equal(3.14, 3.1416, precision: 2);
+    }
+
+    [Fact]
+    public void Boolean_Assertions()
+    {
+        Assert.True(5 > 3);
+        Assert.False(5 < 3);
+    }
+
+    [Fact]
+    public void Null_Assertions()
+    {
+        string? nullString = null;
+        string notNullString = "hello";
+
+        Assert.Null(nullString);
+        Assert.NotNull(notNullString);
+    }
+
+    [Fact]
+    public void Collection_Assertions()
+    {
+        var list = new List<int> { 1, 2, 3, 4, 5 };
+
+        Assert.Contains(3, list);
+        Assert.DoesNotContain(10, list);
+        Assert.Empty(new List<int>());
+        Assert.NotEmpty(list);
+        Assert.Equal(5, list.Count);
+    }
+
+    [Fact]
+    public void Type_Assertions()
+    {
+        object obj = "hello";
+
+        Assert.IsType<string>(obj);
+        Assert.IsNotType<int>(obj);
+        Assert.IsAssignableFrom<object>(obj);
+    }
+
+    [Fact]
+    public void Range_Assertions()
+    {
+        Assert.InRange(5, 1, 10);
+        Assert.NotInRange(15, 1, 10);
+    }
+
+    [Fact]
+    public void String_Assertions()
+    {
+        string text = "Hello World";
+
+        Assert.StartsWith("Hello", text);
+        Assert.EndsWith("World", text);
+        Assert.Contains("lo Wo", text);
+        Assert.Matches(@"\d{3}-\d{4}", "123-4567"); // Regex
+    }
+}
+```
+
+
+## Theory Tests (Parameterized Tests)
+
+
+Instead of writing multiple `[Fact]` tests with similar code, use `[Theory]`:
+
+```csharp
+public class TheoryExamples
+{
+    // [InlineData] = Provide test data inline
+    [Theory]
+    [InlineData(2, true)]   // 2 is even
+    [InlineData(3, false)]  // 3 is odd
+    [InlineData(0, true)]   // 0 is even
+    [InlineData(-2, true)]  // -2 is even
+    [InlineData(-3, false)] // -3 is odd
+    public void IsEven_VariousNumbers_ReturnsCorrectResult(int number, bool expected)
+    {
+        // Arrange
+        var calculator = new Calculator();
+
+        // Act
+        var result = calculator.IsEven(number);
+
+        // Assert
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData(5, 3, 8)]
+    [InlineData(-5, -3, -8)]
+    [InlineData(0, 0, 0)]
+    [InlineData(100, 200, 300)]
+    public void Add_VariousInputs_ReturnsCorrectSum(int a, int b, int expected)
+    {
+        // Arrange
+        var calculator = new Calculator();
+
+        // Act
+        var result = calculator.Add(a, b);
+
+        // Assert
+        Assert.Equal(expected, result);
+    }
+}
+```
+
+**Visual comparison:**
+
+```
+[Fact] Approach (Repetitive):
+┌──────────────────────┐
+│ Test 1: IsEven(2)    │
+│ Test 2: IsEven(3)    │
+│ Test 3: IsEven(0)    │
+│ Test 4: IsEven(-2)   │
+└──────────────────────┘
+  (4 test methods)
+
+[Theory] Approach (DRY):
+┌──────────────────────┐
+│ IsEven_Theory        │
+│   Data: 2, true      │
+│   Data: 3, false     │
+│   Data: 0, true      │
+│   Data: -2, true     │
+└──────────────────────┘
+  (1 test method, 4 test cases)
+```
+
+
+## Test Data from Methods and Properties
+
+
+### Using MemberData
+
+
+```csharp
+public class MemberDataExamples
+{
+    // Property returning test data
+    public static IEnumerable<object[]> AdditionTestData =>
+        new List<object[]>
+        {
+            new object[] { 1, 2, 3 },
+            new object[] { -1, -2, -3 },
+            new object[] { 0, 0, 0 },
+            new object[] { 100, 200, 300 }
+        };
+
+    [Theory]
+    [MemberData(nameof(AdditionTestData))]
+    public void Add_MemberData_ReturnsCorrectSum(int a, int b, int expected)
+    {
+        var calculator = new Calculator();
+        var result = calculator.Add(a, b);
+        Assert.Equal(expected, result);
+    }
+
+    // Method returning test data
+    public static IEnumerable<object[]> GetDivisionTestData()
+    {
+        yield return new object[] { 10, 2, 5.0 };
+        yield return new object[] { 15, 3, 5.0 };
+        yield return new object[] { 7, 2, 3.5 };
+    }
+
+    [Theory]
+    [MemberData(nameof(GetDivisionTestData))]
+    public void Divide_MemberData_ReturnsCorrectQuotient(int a, int b, double expected)
+    {
+        var calculator = new Calculator();
+        var result = calculator.Divide(a, b);
+        Assert.Equal(expected, result);
+    }
+}
+```
+
+
+### Using ClassData
+
+
+```csharp
+// Separate class for test data
+public class AdditionTestData : IEnumerable<object[]>
+{
+    public IEnumerator<object[]> GetEnumerator()
+    {
+        yield return new object[] { 1, 2, 3 };
+        yield return new object[] { -1, -2, -3 };
+        yield return new object[] { 100, 200, 300 };
+    }
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+}
+
+public class ClassDataExamples
+{
+    [Theory]
+    [ClassData(typeof(AdditionTestData))]
+    public void Add_ClassData_ReturnsCorrectSum(int a, int b, int expected)
+    {
+        var calculator = new Calculator();
+        var result = calculator.Add(a, b);
+        Assert.Equal(expected, result);
+    }
+}
+```
+
+
+## Test Fixtures (Setup & Teardown)
+
+
+### Constructor and Dispose (Per-Test Setup)
+
+
+xUnit creates a **new instance** of the test class for **each test**:
+
+```csharp
+public class CalculatorTestsWithSetup : IDisposable
+{
+    private readonly Calculator _calculator;
+    private readonly ITestOutputHelper _output;
+
+    // Constructor runs BEFORE each test
+    public CalculatorTestsWithSetup(ITestOutputHelper output)
+    {
+        _output = output;
+        _calculator = new Calculator();
+        _output.WriteLine("Setup: Calculator created");
+    }
+
+    [Fact]
+    public void Test1()
+    {
+        _output.WriteLine("Running Test1");
+        Assert.NotNull(_calculator);
+    }
+
+    [Fact]
+    public void Test2()
+    {
+        _output.WriteLine("Running Test2");
+        Assert.NotNull(_calculator);
+    }
+
+    // Dispose runs AFTER each test
+    public void Dispose()
+    {
+        _output.WriteLine("Teardown: Cleaning up");
+        // Clean up resources here
+    }
+}
+```
+
+**Execution flow:**
+
+```
+Test1:
+  Constructor → Test1 → Dispose
+
+Test2:
+  Constructor → Test2 → Dispose
+
+(Fresh instance for each test!)
+```
+
+
+### Class Fixtures (Shared Setup)
+
+
+Use when you want to share expensive setup across **all tests** in a class:
+
+```csharp
+// The fixture class
+public class DatabaseFixture : IDisposable
+{
+    public string ConnectionString { get; private set; }
+
+    public DatabaseFixture()
+    {
+        // Expensive setup (runs ONCE for all tests)
+        ConnectionString = "Server=localhost;Database=test;";
+        Console.WriteLine("Database fixture created");
+    }
+
+    public void Dispose()
+    {
+        // Cleanup (runs ONCE after all tests)
+        Console.WriteLine("Database fixture disposed");
+    }
+}
+
+// Test class using the fixture
+public class DatabaseTests : IClassFixture<DatabaseFixture>
+{
+    private readonly DatabaseFixture _fixture;
+
+    public DatabaseTests(DatabaseFixture fixture)
+    {
+        _fixture = fixture;
+    }
+
+    [Fact]
+    public void Test1()
+    {
+        Assert.NotNull(_fixture.ConnectionString);
+    }
+
+    [Fact]
+    public void Test2()
+    {
+        Assert.NotNull(_fixture.ConnectionString);
+    }
+}
+```
+
+**Execution flow:**
+
+```
+DatabaseFixture Constructor (once)
+  ↓
+Test1
+Test2
+  ↓
+DatabaseFixture Dispose (once)
+```
+
+
+### Collection Fixtures (Shared Across Multiple Test Classes)
+
+
+```csharp
+// 1. Define the fixture
+public class ExpensiveResourceFixture : IDisposable
+{
+    public string Resource { get; }
+
+    public ExpensiveResourceFixture()
+    {
+        Resource = "Expensive Resource Initialized";
+        Console.WriteLine("Expensive resource created");
+    }
+
+    public void Dispose()
+    {
+        Console.WriteLine("Expensive resource disposed");
+    }
+}
+
+// 2. Define the collection
+[CollectionDefinition("Resource collection")]
+public class ResourceCollection : ICollectionFixture<ExpensiveResourceFixture>
+{
+    // This class is never instantiated
+}
+
+// 3. Use in multiple test classes
+[Collection("Resource collection")]
+public class TestClass1
+{
+    private readonly ExpensiveResourceFixture _fixture;
+
+    public TestClass1(ExpensiveResourceFixture fixture)
+    {
+        _fixture = fixture;
+    }
+
+    [Fact]
+    public void Test1()
+    {
+        Assert.NotNull(_fixture.Resource);
+    }
+}
+
+[Collection("Resource collection")]
+public class TestClass2
+{
+    private readonly ExpensiveResourceFixture _fixture;
+
+    public TestClass2(ExpensiveResourceFixture fixture)
+    {
+        _fixture = fixture;
+    }
+
+    [Fact]
+    public void Test2()
+    {
+        Assert.NotNull(_fixture.Resource);
+    }
+}
+```
+
+
+## Output from Tests
+
+
+```csharp
+public class OutputExamples
+{
+    private readonly ITestOutputHelper _output;
+
+    public OutputExamples(ITestOutputHelper output)
+    {
+        _output = output;
+    }
+
+    [Fact]
+    public void TestWithOutput()
+    {
+        _output.WriteLine("This is a test output");
+        _output.WriteLine($"Current time: {DateTime.Now}");
+        
+        var result = 2 + 2;
+        _output.WriteLine($"Result: {result}");
+        
+        Assert.Equal(4, result);
+    }
+}
+```
+
+Run with: `dotnet test --logger "console;verbosity=detailed"` to see output.
+
+
+## Testing Exceptions
+
+
+```csharp
+public class ExceptionTests
+{
+    [Fact]
+    public void Method_InvalidInput_ThrowsException()
+    {
+        var calculator = new Calculator();
+
+        // Assert that specific exception is thrown
+        Assert.Throws<DivideByZeroException>(() => 
+        {
+            calculator.Divide(10, 0);
+        });
+    }
+
+    [Fact]
+    public void Method_InvalidInput_ThrowsExceptionWithMessage()
+    {
+        var calculator = new Calculator();
+
+        var exception = Assert.Throws<DivideByZeroException>(() => 
+        {
+            calculator.Divide(10, 0);
+        });
+
+        Assert.Equal("Cannot divide by zero", exception.Message);
+    }
+
+    [Fact]
+    public void Method_InvalidInput_ThrowsAnyException()
+    {
+        var calculator = new Calculator();
+
+        // Assert ANY exception is thrown
+        Assert.ThrowsAny<Exception>(() => 
+        {
+            calculator.Divide(10, 0);
+        });
+    }
+}
+```
+
+
+## Skipping Tests
+
+
+```csharp
+public class SkipExamples
+{
+    [Fact(Skip = "Not implemented yet")]
+    public void FutureFeature_Test()
+    {
+        // This test will be skipped
+    }
+
+    [Fact(Skip = "Bug #123 - Fix in progress")]
+    public void BrokenFeature_Test()
+    {
+        // Skipped due to known bug
+    }
+
+    // Conditional skip (runtime)
+    [Fact]
+    public void MacOnlyTest()
+    {
+        if (!OperatingSystem.IsMacOS())
+        {
+            Skip.If(true, "This test only runs on macOS");
+        }
+
+        // Test code here
+    }
+}
+```
+
+
+## Testing Async Code
+
+
+```csharp
+// Add async method to Calculator class
+public class Calculator
+{
+    // ... previous methods ...
+
+    public async Task<int> AddAsync(int a, int b)
+    {
+        await Task.Delay(100); // Simulate async work
+        return a + b;
+    }
+}
+
+// Test async methods
+public class AsyncTests
+{
+    [Fact]
+    public async Task AddAsync_TwoNumbers_ReturnsSum()
+    {
+        // Arrange
+        var calculator = new Calculator();
+
+        // Act
+        var result = await calculator.AddAsync(5, 3);
+
+        // Assert
+        Assert.Equal(8, result);
+    }
+
+    [Theory]
+    [InlineData(1, 2, 3)]
+    [InlineData(5, 5, 10)]
+    public async Task AddAsync_Theory_ReturnsCorrectSum(int a, int b, int expected)
+    {
+        var calculator = new Calculator();
+        var result = await calculator.AddAsync(a, b);
+        Assert.Equal(expected, result);
+    }
+}
+```
+
+
+## Test Organization Best Practices
+
+
+### 1. One Test Class Per Production Class
+
+
+```
+Calculator/
+└── Calculator.cs
+
+Calculator.Tests/
+└── CalculatorTests.cs
+```
+
+
+### 2. Test Naming Conventions
+
+
+```
+Pattern: MethodName_Scenario_ExpectedBehavior
+
+Examples:
+✓ Add_TwoPositiveNumbers_ReturnsSum
+✓ Divide_ByZero_ThrowsException
+✓ IsEven_NegativeNumber_ReturnsCorrectResult
+
+❌ TestAdd
+❌ Test1
+❌ AddTest
+```
+
+
+### 3. Organize Tests by Feature
+
+
+```csharp
+public class CalculatorTests
+{
+    public class AdditionTests
+    {
+        [Fact]
+        public void Add_Positive_Numbers() { }
+        
+        [Fact]
+        public void Add_Negative_Numbers() { }
+    }
+
+    public class DivisionTests
+    {
+        [Fact]
+        public void Divide_Normal_Case() { }
+        
+        [Fact]
+        public void Divide_By_Zero() { }
+    }
+}
+```
+
+
+## Running Tests in VS Code
+
+
+### 1. Install Extension
+
+
+Install: **".NET Core Test Explorer"** extension in VS Code
+
+
+### 2. Run Tests
+
+
+```
+VS Code Test Explorer Panel:
+┌─────────────────────────────┐
+│ 📁 Calculator.Tests         │
+│   📁 CalculatorTests        │
+│     ✓ Add_Test              │
+│     ✓ Subtract_Test         │
+│     ✓ Multiply_Test         │
+│     ✓ Divide_Test           │
+│     ✓ Divide_ByZero_Test    │
+└─────────────────────────────┘
+
+Buttons:
+▶️  Run All Tests
+🔍 Debug All Tests
+```
+
+
+### 3. Command Line Options
+
+
+```bash
+# Run all tests
+dotnet test
+
+# Run specific test
+dotnet test --filter "FullyQualifiedName~Add_TwoPositiveNumbers"
+
+# Run all tests in a class
+dotnet test --filter "FullyQualifiedName~CalculatorTests"
+
+# Run tests matching a pattern
+dotnet test --filter "DisplayName~Add"
+
+# Run with code coverage
+dotnet test /p:CollectCoverage=true
+
+# Watch mode (re-run on file changes)
+dotnet watch test
+```
+
+
+## Advanced: Testing with Mocks
+
+
+For testing classes with dependencies, you'll want to use a mocking library:
+
+```bash
+# Install Moq (popular mocking library)
+cd Calculator.Tests
+dotnet add package Moq
+```
+
+Example:
+
+```csharp
+// Interface
+public interface ILogger
+{
+    void Log(string message);
+}
+
+// Class with dependency
+public class CalculatorWithLogging
+{
+    private readonly ILogger _logger;
+
+    public CalculatorWithLogging(ILogger logger)
+    {
+        _logger = logger;
+    }
+
+    public int Add(int a, int b)
+    {
+        _logger.Log($"Adding {a} + {b}");
+        return a + b;
+    }
+}
+
+// Test with mock
+public class CalculatorWithLoggingTests
+{
+    [Fact]
+    public void Add_LogsOperation()
+    {
+        // Arrange
+        var mockLogger = new Mock<ILogger>();
+        var calculator = new CalculatorWithLogging(mockLogger.Object);
+
+        // Act
+        calculator.Add(5, 3);
+
+        // Assert
+        mockLogger.Verify(
+            logger => logger.Log("Adding 5 + 3"), 
+            Times.Once
+        );
+    }
+}
+```
+
+
+## Quick Reference Card
+
+
+```
+Common Attributes:
+├─ [Fact]              Single test case
+├─ [Theory]            Parameterized test
+├─ [InlineData(...)]   Inline test data
+├─ [MemberData(...)]   Data from property/method
+├─ [ClassData(...)]    Data from class
+└─ [Trait("Category", "Unit")]  Categorize tests
+
+Common Assertions:
+├─ Assert.Equal(expected, actual)
+├─ Assert.NotEqual(expected, actual)
+├─ Assert.True(condition)
+├─ Assert.False(condition)
+├─ Assert.Null(object)
+├─ Assert.NotNull(object)
+├─ Assert.Throws<TException>(() => { })
+├─ Assert.Contains(item, collection)
+└─ Assert.Empty(collection)
+
+Fixtures:
+├─ Constructor/Dispose    Per-test setup
+├─ IClassFixture<T>       Shared in class
+└─ ICollectionFixture<T>  Shared across classes
+```

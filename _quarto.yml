@@ -50,6 +50,11 @@ book:
         - "content/validate/record_validation.qmd"
         - "content/validate/DataAnnotations-CheatSheet.qmd"
         - "content/validate/DataAnnotations-Validate.qmd"
+    - part: Testing
+      chapters: 
+        - "content/tests/cs_unittest.qmd"
+        - "content/tests/cs_xUnit.qmd"
+        - "content/tests/cs_xUnit-cheatsheet.qmd"
     - part: .NET Interative
       chapters: 
         - "content/interactive/dotnet-interactive.qmd"
