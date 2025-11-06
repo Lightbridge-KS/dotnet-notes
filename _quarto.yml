@@ -50,6 +50,9 @@ book:
         - "content/validate/record_validation.qmd"
         - "content/validate/DataAnnotations-CheatSheet.qmd"
         - "content/validate/DataAnnotations-Validate.qmd"
+    - part: Environment
+      chapters: 
+        - "content/environment/env-management.qmd"
     - part: Testing
       chapters: 
         - "content/tests/cs_unittest.qmd"

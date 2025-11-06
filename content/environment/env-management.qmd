@@ -1,0 +1,241 @@
+# Env Vars
+
+Let me explain environment variables and configuration files in .NET - these are fundamental concepts for building configurable applications.
+
+
+## Environment Variables in .NET
+
+
+Environment variables in .NET can be set and accessed in several ways:
+
+### Setting Environment Variables
+
+
+**At the OS level (macOS/zsh):**
+```bash
+# Temporary (current session only)
+export MY_API_KEY="secret-key-123"
+
+# Permanent (add to ~/.zshrc)
+echo 'export MY_API_KEY="secret-key-123"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+**In launchSettings.json (development only):**
+```json
+{
+  "profiles": {
+    "MyApp": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "MY_API_KEY": "dev-secret-key"
+      }
+    }
+  }
+}
+```
+
+**Programmatically in C#:**
+```csharp
+// Set
+Environment.SetEnvironmentVariable("MY_VAR", "value");
+
+// Get
+string? apiKey = Environment.GetEnvironmentVariable("MY_API_KEY");
+```
+
+
+## Configuration Files: appsettings.json
+
+
+The `appsettings.json` files provide a structured way to store configuration:
+
+```
+┌─────────────────────────────────────────┐
+│         Configuration Hierarchy         │
+├─────────────────────────────────────────┤
+│  1. Command-line arguments (highest)    │
+│  2. Environment variables               │
+│  3. appsettings.{Environment}.json      │
+│  4. appsettings.json (lowest)           │
+│  5. User secrets (Development only)     │
+└─────────────────────────────────────────┘
+     Higher priority overrides lower
+```
+
+
+### Purpose of Each File
+
+
+**appsettings.json** - Base configuration for all environments:
+
+```json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information"
+    }
+  },
+  "DatabaseSettings": {
+    "ConnectionString": "Server=localhost;Database=MyApp",
+    "MaxRetryCount": 3
+  },
+  "ApiSettings": {
+    "BaseUrl": "https://api.example.com",
+    "Timeout": 30
+  }
+}
+```
+
+**appsettings.Development.json** - Overrides for development:
+
+```json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Debug",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "DatabaseSettings": {
+    "ConnectionString": "Server=localhost;Database=MyApp_Dev"
+  },
+  "ApiSettings": {
+    "BaseUrl": "https://localhost:5001"
+  }
+}
+```
+
+
+## How They Work Together
+
+
+Here's a practical example:
+
+```csharp
+// Program.cs
+var builder = WebApplication.CreateBuilder(args);
+
+// This automatically loads configuration in order:
+// 1. appsettings.json
+// 2. appsettings.{Environment}.json
+// 3. Environment variables
+// 4. Command-line arguments
+
+// Access configuration
+var connectionString = builder.Configuration
+    .GetConnectionString("DefaultConnection");
+
+// Or bind to strongly-typed classes
+builder.Services.Configure<ApiSettings>(
+    builder.Configuration.GetSection("ApiSettings"));
+
+var app = builder.Build();
+```
+
+
+## Practical Example: Database Configuration
+
+
+Let's create a real-world scenario:
+
+**1. Create a settings class:**
+
+```csharp
+public class DatabaseSettings
+{
+    public string ConnectionString { get; set; } = string.Empty;
+    public int MaxRetryCount { get; set; }
+    public int CommandTimeout { get; set; }
+}
+```
+
+**2. Configure in appsettings.json:**
+
+```json
+{
+  "DatabaseSettings": {
+    "ConnectionString": "Server=prod-server;Database=MyApp",
+    "MaxRetryCount": 5,
+    "CommandTimeout": 30
+  }
+}
+```
+
+**3. Override for development:**
+
+```json
+// appsettings.Development.json
+{
+  "DatabaseSettings": {
+    "ConnectionString": "Server=localhost;Database=MyApp_Dev",
+    "CommandTimeout": 60  // More time for debugging
+  }
+}
+```
+
+**4. Use in your code:**
+
+```csharp
+// Program.cs
+builder.Services.Configure<DatabaseSettings>(
+    builder.Configuration.GetSection("DatabaseSettings"));
+
+// In a service/controller
+public class MyService
+{
+    private readonly DatabaseSettings _dbSettings;
+    
+    public MyService(IOptions<DatabaseSettings> dbSettings)
+    {
+        _dbSettings = dbSettings.Value;
+    }
+    
+    public void ConnectToDatabase()
+    {
+        Console.WriteLine($"Connecting to: {_dbSettings.ConnectionString}");
+        Console.WriteLine($"Timeout: {_dbSettings.CommandTimeout}");
+    }
+}
+```
+
+
+## Environment-Specific Configurations
+
+
+.NET recognizes these standard environments:
+
+- **Development**: Local development
+- **Staging**: Testing/pre-production
+- **Production**: Live environment
+
+You can create files for each:
+
+```
+MyApp/
+├── appsettings.json              # Base config
+├── appsettings.Development.json  # Dev overrides
+├── appsettings.Staging.json      # Staging overrides
+└── appsettings.Production.json   # Production overrides
+```
+
+
+## Best Practices
+
+
+1. **Never commit secrets** to appsettings.json files
+2. **Use User Secrets** for development:
+   ```bash
+   dotnet user-secrets init
+   dotnet user-secrets set "ApiKey" "secret-value"
+   ```
+
+3. **Use environment variables** for production secrets:
+   ```bash
+   export DatabaseSettings__ConnectionString="Server=prod;Password=secret"
+   ```
+   Note: Use `__` (double underscore) for nested properties
+
+4. **Keep base settings generic** in appsettings.json
+5. **Environment-specific settings** go in their respective files
