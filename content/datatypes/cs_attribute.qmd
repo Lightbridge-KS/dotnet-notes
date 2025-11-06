@@ -1,0 +1,181 @@
+# `C#` Attribute 
+
+::: {.callout-note appearance="default" collapse="false"}
+C# attribute vs Python decorators
+:::
+
+While C# **Attributes** and Python **Decorators** might look similar syntactically (both appearing above methods/classes with special syntax), they work quite differently. Let me explain the key differences and show you how each works.
+
+
+## Python Decorators vs C# Attributes
+
+
+### Python Decorators: Runtime Behavior Modification
+
+Python decorators are **functions that wrap other functions**, modifying their behavior at runtime:
+
+```python
+def timer_decorator(func):
+    def wrapper(*args, **kwargs):
+        import time
+        start = time.time()
+        result = func(*args, **kwargs)  # Call original function
+        end = time.time()
+        print(f"{func.__name__} took {end - start} seconds")
+        return result
+    return wrapper
+
+@timer_decorator
+def slow_function():
+    import time
+    time.sleep(1)
+    return "Done"
+
+slow_function()  # Automatically prints timing info
+```
+
+
+### C# Attributes: Metadata Annotation
+
+C# Attributes are **metadata** attached to code elements. They don't automatically modify behavior - they're just information that can be inspected via reflection:
+
+```csharp
+// Define a custom attribute
+[AttributeUsage(AttributeTargets.Method)]
+public class TimerAttribute : Attribute
+{
+    public string Description { get; set; }
+    public TimerAttribute(string description = "")
+    {
+        Description = description;
+    }
+}
+
+// Apply the attribute
+public class MyClass
+{
+    [Timer("This is a slow operation")]
+    public string SlowMethod()
+    {
+        Thread.Sleep(1000);
+        return "Done";
+    }
+}
+```
+
+The attribute above does **nothing** by itself! It's just metadata. To use it, you need to:
+1. Use reflection to check if it exists
+2. Manually implement the behavior
+
+
+## Key Differences
+
+
+```
+Python Decorator                    C# Attribute
+================                    ============
+✓ Modifies behavior directly        ✗ Just metadata
+✓ Wraps the function                ✗ Doesn't wrap anything
+✓ Executes code before/after        ✗ Requires reflection to use
+✓ Runtime modification              ✗ Compile-time metadata
+```
+
+
+## How to Achieve Decorator-like Behavior in C#
+
+
+### Option 1: Manual Reflection Check
+
+```csharp
+public class TimerHelper
+{
+    public static void ExecuteWithTiming(object instance, string methodName)
+    {
+        var method = instance.GetType().GetMethod(methodName);
+        var hasTimer = method?.GetCustomAttribute<TimerAttribute>() != null;
+        
+        if (hasTimer)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            method.Invoke(instance, null);
+            stopwatch.Stop();
+            Console.WriteLine($"{methodName} took {stopwatch.ElapsedMilliseconds}ms");
+        }
+        else
+        {
+            method?.Invoke(instance, null);
+        }
+    }
+}
+```
+
+
+### Option 2: Using Interceptors (Advanced)
+
+For true decorator-like behavior, you'd need:
+
+- **AOP frameworks** (like PostSharp, Castle Windsor)
+- **Source generators** (C# 9+)
+- **Middleware patterns** (in ASP.NET Core)
+
+Example with ASP.NET Core Action Filters (which use attributes):
+
+```csharp
+public class TimingActionFilter : ActionFilterAttribute
+{
+    private Stopwatch _stopwatch;
+    
+    public override void OnActionExecuting(ActionExecutingContext context)
+    {
+        _stopwatch = Stopwatch.StartNew();
+    }
+    
+    public override void OnActionExecuted(ActionExecutedContext context)
+    {
+        _stopwatch.Stop();
+        Console.WriteLine($"Action took {_stopwatch.ElapsedMilliseconds}ms");
+    }
+}
+
+// In controller:
+[TimingActionFilter]
+public IActionResult MyAction()
+{
+    // This WILL be timed automatically!
+    return Ok();
+}
+```
+
+
+## Common Built-in Attributes in C#
+
+
+Here are some attributes you'll encounter frequently:
+
+```csharp
+// Serialization
+[Serializable]
+public class Person { }
+
+// JSON serialization
+[JsonProperty("user_name")]
+public string UserName { get; set; }
+
+// Validation
+[Required]
+[StringLength(100)]
+public string Name { get; set; }
+
+// Unit testing
+[Test]
+public void TestMethod() { }
+
+// Obsolete warning
+[Obsolete("Use NewMethod instead")]
+public void OldMethod() { }
+
+// Conditional compilation
+[Conditional("DEBUG")]
+public void DebugOnly() { }
+```
+
