@@ -61,6 +61,7 @@ book:
         - "content/tests/cs_testrepo-architect.qmd"
         - "content/tests/cs_xUnit.qmd"
         - "content/tests/cs_xUnit-cheatsheet.qmd"
+        - "content/tests/cs_moq_basic.qmd"
     - part: .NET Interative
       chapters: 
         - "content/interactive/dotnet-interactive.qmd"

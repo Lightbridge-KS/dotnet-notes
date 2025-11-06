@@ -1,0 +1,305 @@
+## Mocks and Stubs
+
+
+Test doubles are like "stand-ins" or "stunt doubles" in movies - they replace real objects during testing to make tests faster, more reliable, and focused on testing one thing at a time.
+
+
+## Why Do We Need Test Doubles?
+
+
+Imagine you're testing a `WeatherService` class that fetches weather data from an API:
+
+```ascii
+┌─────────────────┐      HTTP Request       ┌──────────────────┐
+│                 │ ──────────────────────> │                  │
+│  WeatherService │                         │  Real Weather API│
+│                 │ <────────────────────── │                  │
+└─────────────────┘      JSON Response      └──────────────────┘
+```
+
+**Problems with testing against real dependencies:**
+- **Slow**: API calls take time
+- **Unreliable**: Network might fail, API might be down
+- **Expensive**: API might have rate limits or costs
+- **Unpredictable**: Weather data changes constantly
+- **Hard to test edge cases**: How do you test error handling if the API always works?
+
+
+## Types of Test Doubles
+
+
+```ascii
+                    Test Doubles
+                         │
+        ┌────────────────┼────────────────┐
+        │                │                │
+      Dummy            Stub             Mock
+   (No behavior)   (Returns data)  (Verifies calls)
+                         │
+                      Fake
+                 (Simple implementation)
+```
+
+**1. Stub**: Returns predetermined data
+**2. Mock**: Verifies that methods were called correctly
+**3. Fake**: A simplified working implementation
+**4. Dummy**: Just fills a parameter requirement
+
+
+## Introduction to Moq
+
+
+Moq is a popular mocking framework for .NET that makes creating test doubles easy. Instead of manually writing fake classes, Moq generates them dynamically.
+
+First, install Moq:
+```bash
+dotnet add package Moq
+```
+
+
+## Practical Example: Email Service
+
+
+Let's say you have an order processing system:
+
+```csharp
+// The interfaces
+public interface IEmailService 
+{
+    bool SendEmail(string to, string subject, string body);
+}
+
+public interface IInventoryService 
+{
+    bool CheckStock(int productId, int quantity);
+    void UpdateStock(int productId, int quantity);
+}
+
+// The class we want to test
+public class OrderProcessor 
+{
+    private readonly IEmailService _emailService;
+    private readonly IInventoryService _inventoryService;
+    
+    public OrderProcessor(IEmailService emailService, IInventoryService inventoryService)
+    {
+        _emailService = emailService;
+        _inventoryService = inventoryService;
+    }
+    
+    public bool ProcessOrder(int productId, int quantity, string customerEmail)
+    {
+        // Check stock
+        if (!_inventoryService.CheckStock(productId, quantity))
+            return false;
+            
+        // Update inventory
+        _inventoryService.UpdateStock(productId, quantity);
+        
+        // Send confirmation email
+        _emailService.SendEmail(
+            customerEmail, 
+            "Order Confirmed", 
+            $"Your order for {quantity} items has been confirmed."
+        );
+        
+        return true;
+    }
+}
+```
+
+
+## Testing with Moq
+
+
+```csharp
+using Moq;
+using Xunit;
+
+public class OrderProcessorTests
+{
+    [Fact]
+    public void ProcessOrder_WhenStockAvailable_ShouldCompleteSuccessfully()
+    {
+        // Arrange - Create mocks
+        var mockEmailService = new Mock<IEmailService>();
+        var mockInventoryService = new Mock<IInventoryService>();
+        
+        // Setup STUB behavior - what should be returned
+        mockInventoryService
+            .Setup(x => x.CheckStock(It.IsAny<int>(), It.IsAny<int>()))
+            .Returns(true);  // Stub returns true for any input
+            
+        mockEmailService
+            .Setup(x => x.SendEmail(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(true);
+        
+        var orderProcessor = new OrderProcessor(
+            mockEmailService.Object,    // .Object gives the mocked instance
+            mockInventoryService.Object
+        );
+        
+        // Act
+        var result = orderProcessor.ProcessOrder(123, 2, "customer@email.com");
+        
+        // Assert
+        Assert.True(result);
+        
+        // Verify MOCK expectations - verify methods were called
+        mockInventoryService.Verify(
+            x => x.CheckStock(123, 2), 
+            Times.Once  // Verify it was called exactly once
+        );
+        
+        mockInventoryService.Verify(
+            x => x.UpdateStock(123, 2),
+            Times.Once
+        );
+        
+        mockEmailService.Verify(
+            x => x.SendEmail(
+                "customer@email.com",
+                "Order Confirmed",
+                It.Is<string>(body => body.Contains("2 items"))
+            ),
+            Times.Once
+        );
+    }
+    
+    [Fact]
+    public void ProcessOrder_WhenNoStock_ShouldReturnFalse()
+    {
+        // Arrange
+        var mockEmailService = new Mock<IEmailService>();
+        var mockInventoryService = new Mock<IInventoryService>();
+        
+        // Setup stub to return false (no stock)
+        mockInventoryService
+            .Setup(x => x.CheckStock(It.IsAny<int>(), It.IsAny<int>()))
+            .Returns(false);
+        
+        var orderProcessor = new OrderProcessor(
+            mockEmailService.Object,
+            mockInventoryService.Object
+        );
+        
+        // Act
+        var result = orderProcessor.ProcessOrder(123, 2, "customer@email.com");
+        
+        // Assert
+        Assert.False(result);
+        
+        // Verify email was NOT sent when no stock
+        mockEmailService.Verify(
+            x => x.SendEmail(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never  // Should never be called
+        );
+        
+        // Verify stock was NOT updated
+        mockInventoryService.Verify(
+            x => x.UpdateStock(It.IsAny<int>(), It.IsAny<int>()),
+            Times.Never
+        );
+    }
+}
+```
+
+
+## Key Moq Features
+
+
+### 1. Setup Methods (Stubbing)
+
+
+```csharp
+// Return specific value
+mock.Setup(x => x.GetPrice(1)).Returns(99.99m);
+
+// Return different values for different inputs
+mock.Setup(x => x.GetPrice(It.IsInRange(1, 10, Range.Inclusive))).Returns(50m);
+mock.Setup(x => x.GetPrice(It.Is<int>(id => id > 10))).Returns(100m);
+
+// Throw exception
+mock.Setup(x => x.GetPrice(0)).Throws<ArgumentException>();
+
+// Async methods
+mock.Setup(x => x.GetPriceAsync(1)).ReturnsAsync(99.99m);
+```
+
+
+### 2. Verification (Mocking)
+
+
+```csharp
+// Verify called with exact parameters
+mock.Verify(x => x.SendEmail("test@email.com", "Subject", "Body"));
+
+// Verify called certain number of times
+mock.Verify(x => x.SendEmail(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Exactly(2));
+mock.Verify(x => x.UpdateStock(It.IsAny<int>(), It.IsAny<int>()), Times.AtLeastOnce);
+mock.Verify(x => x.Delete(It.IsAny<int>()), Times.Never);
+```
+
+
+### 3. Argument Matchers
+
+
+```csharp
+It.IsAny<string>()                           // Any string
+It.Is<int>(x => x > 0)                      // Custom condition
+It.IsIn("option1", "option2", "option3")    // In a set
+It.IsRegex(@"\d{3}-\d{3}-\d{4}")           // Matches regex
+It.IsInRange(1, 100, Range.Inclusive)       // In range
+```
+
+
+## Visual Summary
+
+
+```ascii
+┌──────────────────────────────────────────────────┐
+│                  Unit Test                       │
+│                                                  │
+│  ┌──────────────┐         ┌──────────────┐       │
+│  │              │ ──────> │              │       │
+│  │ System Under │         │  Mock/Stub   │       │
+│  │     Test     │ <────── │ (Test Double)│       │
+│  │              │         │              │       │
+│  └──────────────┘         └──────────────┘       │
+│                                ↑                 │
+│                                │                 │
+│                           Configured by          │
+│                            Moq Framework         │
+│                                                  │
+│  Benefits:                                       │
+│  ✓ Fast execution                                │
+│  ✓ Predictable behavior                          │
+│  ✓ Test edge cases easily                        │
+│  ✓ No external dependencies                      │
+└──────────────────────────────────────────────────┘
+```
+
+
+## Best Practices
+
+
+1. **Mock interfaces, not concrete classes** - Design your code with dependency injection in mind
+2. **Don't over-mock** - Only mock external dependencies, not the class you're testing
+3. **Keep tests simple** - Each test should verify one behavior
+4. **Use descriptive names** - Test names should explain what they test
+5. **Arrange-Act-Assert pattern** - Structure your tests consistently
+
+
+## Try It Yourself
+
+
+Create a simple project to practice:
+
+```bash
+# Create test project
+dotnet new xunit -n OrderSystem.Tests
+cd OrderSystem.Tests
+dotnet add package Moq
+```
+
+Then try creating a simple service with dependencies and write tests using Moq. Start with something simple like a `NotificationService` that depends on `IEmailSender` and `ISmsSender`.
