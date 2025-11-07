@@ -1,0 +1,223 @@
+# EF Core (basic)
+
+
+## What is Entity Framework Core?
+
+
+EF Core is an **Object-Relational Mapper (ORM)** for .NET. It allows you to work with databases using C# objects instead of writing raw SQL queries.
+
+```
+Traditional Approach (SQL):
+┌─────────────┐     SQL Query      ┌──────────────┐
+│   C# Code   │ ─────────────────> │   Database   │
+│             │ <───────────────── │              │
+└─────────────┘   DataReader/ADO   └──────────────┘
+     ↓
+  Manual mapping of data to objects
+
+
+EF Core Approach (ORM):
+┌─────────────┐                    ┌──────────────┐
+│   C# Code   │ ──── LINQ Query ──>│   EF Core    │
+│  (Objects)  │                    │  (DbContext) │
+└─────────────┘                    └──────┬───────┘
+                                          │
+                                      Generates SQL
+                                          │
+                                          ↓
+                                   ┌──────────────┐
+                                   │   Database   │
+                                   └──────────────┘
+```
+
+
+## What is DbContext?
+
+
+`DbContext` is the **main class** you use to interact with the database. Think of it as:
+- A **session** with your database
+- A **unit of work** that tracks changes
+- A **gateway** to query and save data
+
+```
+┌─────────────────────────────────────────┐
+│           Your DbContext Class          │
+├─────────────────────────────────────────┤
+│  DbSet<Patient> Patients                │  ← Collection of Patients
+│  DbSet<Scan> Scans                      │  ← Collection of Scans
+│  DbSet<Diagnosis> Diagnoses             │  ← Collection of Diagnoses
+├─────────────────────────────────────────┤
+│  - Change Tracking                      │
+│  - Query Translation (LINQ → SQL)       │
+│  - Transaction Management               │
+│  - Database Connection                  │
+└─────────────────────────────────────────┘
+```
+
+
+## Basic Example
+
+
+Let's create a simple radiology system with patients and imaging scans:
+
+```csharp
+// 1. Define your entities (models)
+public class Patient
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public DateTime DateOfBirth { get; set; }
+    
+    // Navigation property - one patient has many scans
+    public List<Scan> Scans { get; set; }
+}
+
+public class Scan
+{
+    public int Id { get; set; }
+    public string Modality { get; set; } // CT, MRI, X-Ray
+    public DateTime ScanDate { get; set; }
+    public string BodyPart { get; set; }
+    
+    // Foreign key
+    public int PatientId { get; set; }
+    
+    // Navigation property - each scan belongs to one patient
+    public Patient Patient { get; set; }
+}
+
+// 2. Create your DbContext
+public class RadiologyDbContext : DbContext
+{
+    // DbSet represents a table in the database
+    public DbSet<Patient> Patients { get; set; }
+    public DbSet<Scan> Scans { get; set; }
+    
+    // Configure database connection
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        // Using SQLite for this example (good for learning)
+        optionsBuilder.UseSqlite("Data Source=radiology.db");
+    }
+}
+
+// 3. Use the DbContext
+public class Program
+{
+    public static void Main()
+    {
+        using (var context = new RadiologyDbContext())
+        {
+            // Create database if it doesn't exist
+            context.Database.EnsureCreated();
+            
+            // Add a new patient
+            var patient = new Patient
+            {
+                Name = "John Doe",
+                DateOfBirth = new DateTime(1980, 5, 15)
+            };
+            
+            context.Patients.Add(patient);
+            context.SaveChanges(); // This executes SQL INSERT
+            
+            // Query patients
+            var allPatients = context.Patients.ToList();
+            
+            // LINQ query with filter
+            var patientWithScans = context.Patients
+                .Include(p => p.Scans) // Eager loading
+                .FirstOrDefault(p => p.Name == "John Doe");
+        }
+    }
+}
+```
+
+
+## Key Concepts
+
+
+### 1. DbSet<T>
+
+A `DbSet<T>` represents a **collection** (table) that you can query and save entities to:
+
+```csharp
+public DbSet<Patient> Patients { get; set; }
+```
+
+This maps to a `Patients` table in your database.
+
+
+### 2. Change Tracking
+
+EF Core automatically tracks changes to your entities:
+
+```
+Initial State:
+┌─────────────────┐
+│   DbContext     │
+│   (Empty)       │
+└─────────────────┘
+
+After Loading:
+┌─────────────────┐
+│   DbContext     │
+│                 │
+│  Patient #1  ━━━━━> [Unchanged]
+│  Patient #2  ━━━━━> [Unchanged]
+└─────────────────┘
+
+After Modifying:
+┌─────────────────┐
+│   DbContext     │
+│                 │
+│  Patient #1  ━━━━━> [Modified] ← Tracked!
+│  Patient #2  ━━━━━> [Unchanged]
+└─────────────────┘
+
+After SaveChanges():
+┌─────────────────┐
+│   DbContext     │  Generates: UPDATE Patients 
+│                 │            SET Name = '...'
+│  Patient #1  ━━━━━> [Unchanged]
+│  Patient #2  ━━━━━> [Unchanged]
+└─────────────────┘
+```
+
+
+### 3. LINQ to SQL Translation
+
+You write LINQ (Language Integrated Query), EF Core converts it to SQL:
+
+```csharp
+// C# LINQ
+var ctScans = context.Scans
+    .Where(s => s.Modality == "CT")
+    .OrderBy(s => s.ScanDate)
+    .ToList();
+
+// Generated SQL (approximately)
+// SELECT * FROM Scans 
+// WHERE Modality = 'CT' 
+// ORDER BY ScanDate
+```
+
+
+## DbContext Lifecycle
+
+
+```
+1. Create DbContext
+   ↓
+2. Query/Add/Update/Delete entities
+   ↓
+3. SaveChanges() ← Commits to database
+   ↓
+4. Dispose DbContext ← Releases resources
+
+Best Practice: Use 'using' statement
+using (var context = new MyDbContext())
+{
+    // Work with context
+} // Automatically disposed here
+```

@@ -55,6 +55,9 @@ book:
       chapters: 
         - "content/environment/env-management.qmd"
         - "content/environment/config-injection-pipeline.qmd"
+    - part: EF Core
+      chapters: 
+        - "content/EF/ef-core-basic.qmd"
     - part: Testing
       chapters: 
         - "content/tests/cs_unittest.qmd"
