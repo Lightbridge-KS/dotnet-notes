@@ -1,0 +1,104 @@
+# Stack in C#
+
+A **Stack** is a collection in C# that follows the **LIFO (Last-In-First-Out)** principle. Think of it like a stack of plates—you add plates on top and remove plates from the top.
+
+## Visual Representation
+
+
+```
+Push operations:          Pop operations:
+                         
+    [Item 3] ← Push         [Item 3] ← Pop (removed first)
+    [Item 2]                [Item 2]
+    [Item 1]                [Item 1]
+    --------                --------
+     Stack                   Stack
+```
+
+## Your Example Explained
+
+
+```csharp
+var createdRecords = new Stack<(string table, int id)>();
+```
+
+This creates a Stack that holds **tuples** with two values:
+- `string table` - table name
+- `int id` - record ID
+
+This pattern is useful for tracking operations (like database records) where you might need to undo them in reverse order.
+
+## Common Operations
+
+
+```csharp
+var stack = new Stack<(string table, int id)>();
+
+// Push - Add items to the top
+stack.Push(("users", 101));
+stack.Push(("orders", 202));
+stack.Push(("products", 303));
+
+/*
+Stack now looks like:
+    ("products", 303)  ← Top
+    ("orders", 202)
+    ("users", 101)     ← Bottom
+*/
+
+// Peek - Look at top item without removing
+var top = stack.Peek();  // ("products", 303)
+
+// Pop - Remove and return top item
+var removed = stack.Pop();  // ("products", 303)
+
+// Count
+Console.WriteLine(stack.Count);  // 2
+
+// Check if empty
+bool isEmpty = stack.Count == 0;
+```
+
+## Practical Example: Undo Operations
+
+
+```csharp
+var createdRecords = new Stack<(string table, int id)>();
+
+// Creating records
+createdRecords.Push(("patients", 1));
+createdRecords.Push(("scans", 2));
+createdRecords.Push(("reports", 3));
+
+// Undo operations (reverse order)
+while (createdRecords.Count > 0)
+{
+    var (table, id) = createdRecords.Pop();
+    Console.WriteLine($"Rollback: Delete from {table} where id = {id}");
+}
+
+// Output:
+// Rollback: Delete from reports where id = 3
+// Rollback: Delete from scans where id = 2
+// Rollback: Delete from patients where id = 1
+```
+
+## When to Use Stack
+
+
+✅ **Good for:**
+
+- Undo/Redo functionality
+- Backtracking algorithms
+- Parsing expressions
+- Transaction rollbacks (like your example)
+
+❌ **Not good for:**
+
+- Random access (can't access middle items directly)
+- Searching through items
+- Maintaining insertion order for iteration
+
+**Need to access items from both ends?** → Use `Queue<T>` (FIFO)  
+
+**Need random access?** → Use `List<T>` or `Array`

@@ -33,6 +33,7 @@ book:
         - "content/datatypes/datatypes_numeric.qmd"
         - "content/datatypes/cs_dictionary.qmd"
         - "content/datatypes/interface_IEnumerable.qmd"
+        - "content/basic/cs_stack.qmd"
         - "content/datatypes/cs_enums.qmd"
     - part: OOP
       chapters: 
