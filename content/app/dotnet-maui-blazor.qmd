@@ -1,0 +1,294 @@
+---
+title: "MAUI Blazor App Architecture"
+---
+
+This document explains the architecture of a .NET MAUI Blazor Hybrid application.
+
+## Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           MAUI Blazor App                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌─────────────────────┐                                                    │
+│  │   MauiProgram.cs    │  ← Entry Point: Configures services & builds app   │
+│  │   CreateMauiApp()   │                                                    │
+│  └──────────┬──────────┘                                                    │
+│             │                                                               │
+│             ▼                                                               │
+│  ┌─────────────────────┐                                                    │
+│  │     App.xaml.cs     │  ← Application class: Creates the main window      │
+│  │   CreateWindow()    │                                                    │
+│  └──────────┬──────────┘                                                    │
+│             │                                                               │
+│             ▼                                                               │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │                        MainPage.xaml                                │    │
+│  │  ┌─────────────────────────────────────────────────────────────┐    │    │
+│  │  │                    BlazorWebView                            │    │    │
+│  │  │         (Native WebView hosting Blazor content)             │    │    │
+│  │  │                                                             │    │    │
+│  │  │   HostPage: wwwroot/index.html                              │    │    │
+│  │  │   RootComponent: Routes → mounted at #app                   │    │    │
+│  │  └───────────────────────────┬─────────────────────────────────┘    │    │
+│  └──────────────────────────────┼──────────────────────────────────────┘    │
+│                                 │                                           │
+│                                 ▼                                           │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │                      BLAZOR LAYER                                    │   │
+│  │  ┌────────────────┐    ┌──────────────────────────────────────────┐  │   │
+│  │  │  Routes.razor  │───▶│  Layout/MainLayout.razor                 │  │   │
+│  │  │   (Router)     │    │  ┌────────────┐  ┌────────────────────┐  │  │   │
+│  │  └────────────────┘    │  │  NavMenu   │  │     @Body          │  │  │   │
+│  │                        │  │  (sidebar) │  │  (page content)    │  │  │   │
+│  │                        │  └────────────┘  └────────────────────┘  │  │   │
+│  │                        └──────────────────────────────────────────┘  │   │
+│  │                                     │                                │   │
+│  │                                     ▼                                │   │
+│  │              ┌──────────────────────────────────────────┐            │   │
+│  │              │              Pages/                      │            │   │
+│  │              │  ┌──────────┐ ┌─────────┐ ┌───────────┐  │            │   │
+│  │              │  │  Home    │ │ Counter │ │  Weather  │  │            │   │
+│  │              │  │  @"/"    │ │@"/counter"│@"/weather"│  │            │   │
+│  │              │  └──────────┘ └─────────┘ └───────────┘  │            │   │
+│  │              └──────────────────────────────────────────┘            │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+## File Structure
+
+```
+MauiBlazorAppTest/
+├── MauiProgram.cs          # App entry point & DI configuration
+├── App.xaml(.cs)           # MAUI Application class
+├── MainPage.xaml(.cs)      # MAUI page hosting BlazorWebView
+├── Components/
+│   ├── _Imports.razor      # Global Razor imports
+│   ├── Routes.razor        # Blazor Router configuration
+│   ├── Layout/
+│   │   ├── MainLayout.razor    # Page layout template
+│   │   └── NavMenu.razor       # Navigation sidebar
+│   └── Pages/
+│       ├── Home.razor      # "/" route
+│       ├── Counter.razor   # "/counter" route
+│       └── Weather.razor   # "/weather" route
+├── wwwroot/
+│   ├── index.html          # HTML shell for Blazor
+│   └── css/                # Stylesheets
+├── Platforms/              # Platform-specific code (iOS, Android, Mac, etc.)
+└── Resources/              # App icons, images, fonts
+```
+
+## How It Works (Layer by Layer)
+
+### 1. Entry Point (`MauiProgram.cs`)
+
+```csharp
+public static MauiApp CreateMauiApp()
+{
+    var builder = MauiApp.CreateBuilder();
+    builder
+        .UseMauiApp<App>()
+        .ConfigureFonts(fonts =>
+        {
+            fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+        });
+
+    builder.Services.AddMauiBlazorWebView();  // Registers BlazorWebView
+
+#if DEBUG
+    builder.Services.AddBlazorWebViewDeveloperTools();
+    builder.Logging.AddDebug();
+#endif
+
+    return builder.Build();
+}
+```
+
+**Key Points:**
+- Configures dependency injection container
+- Registers the `BlazorWebView` service that bridges MAUI and Blazor
+- In Debug mode, adds developer tools and debug logging
+
+### 2. Application Class (`App.xaml.cs`)
+
+```csharp
+public partial class App : Application
+{
+    public App()
+    {
+        InitializeComponent();
+    }
+
+    protected override Window CreateWindow(IActivationState? activationState)
+    {
+        return new Window(new MainPage()) { Title = "MauiBlazorAppTest" };
+    }
+}
+```
+
+**Key Points:**
+- Creates the main application window
+- Sets `MainPage` as the root content
+
+### 3. Main Page with BlazorWebView (`MainPage.xaml`)
+
+```xml
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:components="clr-namespace:MauiBlazorAppTest.Components"
+             x:Class="MauiBlazorAppTest.MainPage">
+
+    <BlazorWebView x:Name="blazorWebView" HostPage="wwwroot/index.html">
+        <BlazorWebView.RootComponents>
+            <RootComponent Selector="#app" ComponentType="{x:Type components:Routes}" />
+        </BlazorWebView.RootComponents>
+    </BlazorWebView>
+
+</ContentPage>
+```
+
+**Key Points:**
+- `BlazorWebView` is a native WebView control that hosts Blazor content
+- `HostPage` points to the HTML shell file
+- `RootComponent` mounts the `Routes` component at the `#app` element
+
+### 4. HTML Shell (`wwwroot/index.html`)
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MauiBlazorAppTest</title>
+    <base href="/" />
+    <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link rel="stylesheet" href="MauiBlazorAppTest.styles.css" />
+</head>
+<body>
+    <div class="status-bar-safe-area"></div>
+    <div id="app">Loading...</div>
+    <script src="_framework/blazor.webview.js" autostart="false"></script>
+</body>
+</html>
+```
+
+**Key Points:**
+- Standard HTML page that hosts the Blazor app
+- `#app` div is where Blazor components are rendered
+- Uses `blazor.webview.js` (not `blazor.server.js` or `blazor.webassembly.js`)
+
+### 5. Blazor Router (`Components/Routes.razor`)
+
+```razor
+<Router AppAssembly="@typeof(MauiProgram).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+</Router>
+```
+
+**Key Points:**
+- Scans the assembly for components with `@page` directives
+- Routes URLs to the correct page component
+- Wraps all pages in `MainLayout` by default
+
+### 6. Layout (`Components/Layout/MainLayout.razor`)
+
+```razor
+@inherits LayoutComponentBase
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4">
+            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+```
+
+**Key Points:**
+- Defines the overall page structure (sidebar + main content)
+- `@Body` is replaced with the current page component
+- `NavMenu` provides navigation links
+
+### 7. Pages (`Components/Pages/`)
+
+Example - Counter page:
+
+```razor
+@page "/counter"
+
+<h1>Counter</h1>
+
+<p role="status">Current count: @currentCount</p>
+
+<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+
+@code {
+    private int currentCount = 0;
+
+    private void IncrementCount()
+    {
+        currentCount++;
+    }
+}
+```
+
+**Key Points:**
+- `@page "/counter"` defines the route
+- Standard Blazor component with HTML and C# code
+- Event handlers like `@onclick` work the same as web Blazor
+
+## Key Concepts
+
+### Hybrid Architecture
+
+MAUI Blazor is a **hybrid** approach:
+- **MAUI** provides the native shell (window, lifecycle, platform APIs)
+- **Blazor** handles all UI rendering inside a WebView
+- **BlazorWebView** is the bridge between these two worlds
+
+### Execution Model
+
+Unlike Blazor WebAssembly which runs .NET in the browser via WASM, MAUI Blazor runs .NET **natively**:
+- On macOS/iOS: Uses Ahead-of-Time (AOT) compilation
+- The WebView only handles rendering; all .NET code runs natively
+
+### CSS Isolation
+
+Blazor supports component-scoped CSS:
+- Create `ComponentName.razor.css` alongside your component
+- Styles are automatically scoped to that component
+- Compiled into `MauiBlazorAppTest.styles.css`
+
+## Comparison: Blazor Web vs MAUI Blazor
+
+| Aspect | Blazor Web | MAUI Blazor |
+|--------|-----------|-------------|
+| **Host** | Browser | Native WebView |
+| **Script** | `blazor.server.js` or `blazor.webassembly.js` | `blazor.webview.js` |
+| **Runtime** | .NET on server or WASM in browser | Native .NET (AOT on iOS/Mac) |
+| **Platform APIs** | Limited (browser sandbox) | Full access via MAUI |
+| **Deployment** | Web server or static hosting | App store or direct install |
+
+## Benefits of MAUI Blazor
+
+1. **Code Reuse**: Share Blazor components between web and native apps
+2. **Native Performance**: .NET runs natively, not in WASM
+3. **Platform Access**: Full access to device features (camera, GPS, file system)
+4. **Familiar Tooling**: Same Razor syntax, C#, and patterns as Blazor web
+5. **Cross-Platform**: Single codebase for iOS, Android, macOS, and Windows
