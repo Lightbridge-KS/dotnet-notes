@@ -79,6 +79,8 @@ book:
         - "content/app/dotnet-react-ex.qmd"
         - text: MAUI Blazor App
           href: "content/app/dotnet-maui-blazor.qmd"
+        - text: MAUI Blazor App - Setup
+          href: "content/app/dotnet-maui-blazor-setup.qmd"
     - part: DotNet WebAPI
       chapters: 
         - "content/models/model_DTO_table.qmd"

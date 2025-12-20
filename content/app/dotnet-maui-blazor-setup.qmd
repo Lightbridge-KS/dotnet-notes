@@ -1,0 +1,463 @@
+---
+title: "MAUI Blazor Hybrid — A Setup Guide"
+---
+
+A complete guide to setting up a .NET MAUI Blazor Hybrid app with a class library and MudBlazor components.
+
+## Prerequisites
+
+- .NET 9 SDK (or later)
+- MAUI workload installed (`dotnet workload install maui`)
+- Xcode (for macOS/iOS development)
+- Visual Studio Code with C# Dev Kit (optional)
+
+Verify installation:
+
+```bash
+dotnet --version          # Should show 9.x.x
+dotnet workload list      # Should show 'maui'
+```
+
+---
+
+## Step 1: Create the Solution
+
+```bash
+# Create solution directory
+mkdir MyMauiApp && cd MyMauiApp
+
+# Create MAUI Blazor app
+dotnet new maui-blazor -n MyMauiApp -f net9.0
+
+# Create solution file
+dotnet new sln -n MyMauiApp
+
+# Add MAUI project to solution
+dotnet sln add MyMauiApp/MyMauiApp.csproj
+```
+
+### Resulting Structure
+
+```
+MyMauiApp/
+├── MyMauiApp.sln
+└── MyMauiApp/
+    ├── MyMauiApp.csproj
+    ├── MauiProgram.cs
+    ├── App.xaml(.cs)
+    ├── MainPage.xaml(.cs)
+    ├── Components/
+    │   ├── _Imports.razor
+    │   ├── Routes.razor
+    │   ├── Layout/
+    │   └── Pages/
+    ├── wwwroot/
+    ├── Platforms/
+    └── Resources/
+```
+
+---
+
+## Step 2: Create Class Library
+
+```bash
+# Create class library for shared logic
+dotnet new classlib -n MyMauiApp.Core -f net9.0
+
+# Add to solution
+dotnet sln add MyMauiApp.Core/MyMauiApp.Core.csproj
+
+# Reference from MAUI app
+dotnet add MyMauiApp/MyMauiApp.csproj reference MyMauiApp.Core/MyMauiApp.Core.csproj
+
+# Remove default Class1.cs
+rm MyMauiApp.Core/Class1.cs
+```
+
+### Create a Service Interface
+
+**`MyMauiApp.Core/IGreetingService.cs`**
+
+```csharp
+namespace MyMauiApp.Core;
+
+public interface IGreetingService
+{
+    string GetGreeting(string name);
+    string GetTimeBasedGreeting(string name);
+}
+```
+
+### Create the Implementation
+
+**`MyMauiApp.Core/GreetingService.cs`**
+
+```csharp
+namespace MyMauiApp.Core;
+
+public class GreetingService : IGreetingService
+{
+    public string GetGreeting(string name)
+    {
+        return $"Hello, {name}! Welcome to MAUI Blazor.";
+    }
+
+    public string GetTimeBasedGreeting(string name)
+    {
+        var hour = DateTime.Now.Hour;
+        var timeGreeting = hour switch
+        {
+            >= 5 and < 12 => "Good morning",
+            >= 12 and < 17 => "Good afternoon",
+            >= 17 and < 21 => "Good evening",
+            _ => "Good night"
+        };
+
+        return $"{timeGreeting}, {name}!";
+    }
+}
+```
+
+### Register Service in DI Container
+
+**`MyMauiApp/MauiProgram.cs`**
+
+```csharp
+using Microsoft.Extensions.Logging;
+using MyMauiApp.Core;
+
+namespace MyMauiApp;
+
+public static class MauiProgram
+{
+    public static MauiApp CreateMauiApp()
+    {
+        var builder = MauiApp.CreateBuilder();
+        builder
+            .UseMauiApp<App>()
+            .ConfigureFonts(fonts =>
+            {
+                fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+            });
+
+        builder.Services.AddMauiBlazorWebView();
+
+        // Register services from Core library
+        builder.Services.AddSingleton<IGreetingService, GreetingService>();
+
+#if DEBUG
+        builder.Services.AddBlazorWebViewDeveloperTools();
+        builder.Logging.AddDebug();
+#endif
+
+        return builder.Build();
+    }
+}
+```
+
+### Use Service in Blazor Component
+
+**`MyMauiApp/Components/Pages/Home.razor`**
+
+```razor
+@page "/"
+@using MyMauiApp.Core
+@inject IGreetingService GreetingService
+
+<h1>Hello, world!</h1>
+
+<p>@GreetingService.GetTimeBasedGreeting("Developer")</p>
+```
+
+---
+
+## Step 3: Add MudBlazor
+
+### Install Package
+
+```bash
+cd MyMauiApp
+dotnet add package MudBlazor
+```
+
+### Update `wwwroot/index.html`
+
+Add CSS in `<head>`:
+
+```html
+<head>
+    <!-- existing content... -->
+
+    <!-- MudBlazor -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
+    <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
+</head>
+```
+
+Add JS before `</body>`:
+
+```html
+    <script src="_framework/blazor.webview.js" autostart="false"></script>
+    <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+</body>
+```
+
+### Register MudBlazor Services
+
+**`MauiProgram.cs`**
+
+```csharp
+using MudBlazor.Services;
+
+// Inside CreateMauiApp(), after AddMauiBlazorWebView():
+builder.Services.AddMudServices();
+```
+
+### Add Global Using
+
+**`Components/_Imports.razor`**
+
+```razor
+@using MudBlazor
+```
+
+### Add MudBlazor Providers
+
+**`Components/Layout/MainLayout.razor`**
+
+```razor
+@inherits LayoutComponentBase
+
+<MudThemeProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<div class="page">
+    <!-- existing layout content -->
+</div>
+```
+
+### Use MudBlazor Components
+
+**`Components/Pages/Home.razor`**
+
+```razor
+@page "/"
+@using MyMauiApp.Core
+@inject IGreetingService GreetingService
+
+<MudText Typo="Typo.h3" GutterBottom="true">Hello, world!</MudText>
+
+<MudText Typo="Typo.body1" Class="mb-4">
+    @GreetingService.GetTimeBasedGreeting("Developer")
+</MudText>
+
+<MudPaper Class="pa-4" MaxWidth="400px">
+    <MudTextField @bind-Value="userName"
+                  Label="Your Name"
+                  Variant="Variant.Outlined"
+                  Placeholder="Enter your name" />
+
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               Class="mt-3"
+               OnClick="Greet">
+        Greet Me!
+    </MudButton>
+</MudPaper>
+
+@if (!string.IsNullOrEmpty(greetingMessage))
+{
+    <MudAlert Severity="Severity.Success" Class="mt-4" MaxWidth="400px">
+        @greetingMessage
+    </MudAlert>
+}
+
+@code {
+    private string userName = "";
+    private string greetingMessage = "";
+
+    private void Greet()
+    {
+        if (!string.IsNullOrWhiteSpace(userName))
+        {
+            greetingMessage = GreetingService.GetGreeting(userName);
+        }
+    }
+}
+```
+
+---
+
+## Step 4: Create Makefile
+
+**`Makefile`** (at solution root)
+
+```makefile
+# MAUI Blazor App Makefile
+
+PROJECT = MyMauiApp/MyMauiApp.csproj
+FRAMEWORK = net9.0-maccatalyst
+CONFIG_DEBUG = Debug
+CONFIG_RELEASE = Release
+
+.DEFAULT_GOAL := help
+
+.PHONY: run
+run: ## Run the app in Debug mode
+	dotnet run -p $(PROJECT) -f $(FRAMEWORK) -c $(CONFIG_DEBUG)
+
+.PHONY: build
+build: ## Build the app in Debug mode
+	dotnet build $(PROJECT) -f $(FRAMEWORK) -c $(CONFIG_DEBUG)
+
+.PHONY: build-release
+build-release: ## Build the app in Release mode
+	dotnet build $(PROJECT) -f $(FRAMEWORK) -c $(CONFIG_RELEASE)
+
+.PHONY: clean
+clean: ## Clean build outputs
+	dotnet clean
+	rm -rf MyMauiApp/bin MyMauiApp/obj
+	rm -rf MyMauiApp.Core/bin MyMauiApp.Core/obj
+
+.PHONY: rebuild
+rebuild: clean build ## Clean and rebuild
+
+.PHONY: restore
+restore: ## Restore NuGet packages
+	dotnet restore
+
+.PHONY: help
+help: ## Show this help
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
+```
+
+---
+
+## Step 5: Build and Run
+
+### macOS (Mac Catalyst)
+
+```bash
+make run
+# or
+dotnet run -f net9.0-maccatalyst -c Debug
+```
+
+### iOS Simulator
+
+```bash
+dotnet build -f net9.0-ios -c Debug
+# Then run from Xcode or VS Code
+```
+
+### Android
+
+```bash
+dotnet build -f net9.0-android -c Debug
+# Requires Android SDK and emulator
+```
+
+---
+
+## Final Solution Structure
+
+```
+MyMauiApp/
+├── MyMauiApp.sln
+├── Makefile
+├── CLAUDE.md
+│
+├── MyMauiApp/                      # MAUI Blazor App
+│   ├── MyMauiApp.csproj
+│   ├── MauiProgram.cs              # DI configuration
+│   ├── App.xaml(.cs)               # Application class
+│   ├── MainPage.xaml(.cs)          # BlazorWebView host
+│   ├── Components/
+│   │   ├── _Imports.razor          # Global usings
+│   │   ├── Routes.razor            # Router
+│   │   ├── Layout/
+│   │   │   ├── MainLayout.razor    # App layout + MudBlazor providers
+│   │   │   └── NavMenu.razor       # Navigation
+│   │   └── Pages/
+│   │       ├── Home.razor
+│   │       ├── Counter.razor
+│   │       └── Weather.razor
+│   ├── wwwroot/
+│   │   ├── index.html              # HTML shell + MudBlazor refs
+│   │   └── css/
+│   ├── Platforms/                  # Platform-specific code
+│   └── Resources/                  # Icons, fonts, images
+│
+└── MyMauiApp.Core/                 # Class Library
+    ├── MyMauiApp.Core.csproj
+    ├── IGreetingService.cs         # Interface
+    └── GreetingService.cs          # Implementation
+```
+
+---
+
+## Common MudBlazor Components
+
+| Component | Purpose |
+|-----------|---------|
+| `MudText` | Typography with Material Design styles |
+| `MudButton` | Buttons with variants (Filled, Outlined, Text) |
+| `MudTextField` | Text input with labels and validation |
+| `MudPaper` | Card-like container with elevation |
+| `MudAlert` | Alert/notification messages |
+| `MudDialog` | Modal dialogs |
+| `MudSnackbar` | Toast notifications |
+| `MudTable` | Data tables with sorting/paging |
+| `MudNavMenu` | Navigation menu |
+| `MudAppBar` | Top app bar |
+
+---
+
+## DI Service Lifetimes
+
+| Lifetime | Method | Use Case |
+|----------|--------|----------|
+| Singleton | `AddSingleton<T>()` | Shared state, caches, configuration |
+| Scoped | `AddScoped<T>()` | Per-user/per-request state |
+| Transient | `AddTransient<T>()` | Stateless services, lightweight operations |
+
+For MAUI Blazor apps:
+- Use **Singleton** for services shared across the app
+- Use **Scoped** for per-page/component services
+- Use **Transient** for stateless utilities
+
+---
+
+## Troubleshooting
+
+### Xcode Version Mismatch
+
+If you see an error like "requires Xcode XX.0":
+
+```bash
+# Check installed SDK versions
+ls /usr/local/share/dotnet/sdk-manifests/9.0.100/microsoft.net.sdk.maccatalyst/
+
+# Remove preview SDK if present
+sudo rm -rf /usr/local/share/dotnet/sdk-manifests/9.0.100/microsoft.net.sdk.maccatalyst/[preview-version]
+sudo rm -rf /usr/local/share/dotnet/packs/Microsoft.MacCatalyst.Sdk.net9.0_[preview-version]
+
+# Repair workloads
+dotnet workload repair
+```
+
+### Hot Reload Not Working
+
+Hot Reload is experimental for MAUI. For best results:
+- Use `dotnet watch` for code changes
+- Restart the app for XAML/layout changes
+
+### MudBlazor Styles Not Loading
+
+Ensure the CSS is loaded in correct order:
+1. Bootstrap (if keeping it)
+2. app.css
+3. MudBlazor.min.css (last, so it can override)
