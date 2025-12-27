@@ -22,6 +22,8 @@ book:
         - "content/orgs/cs_program.qmd"
         - "content/basic/cs_code_docs.qmd"
         - "content/datatypes/cs_attribute.qmd"
+        - text: Proprocessor Directive
+          href: "content/basic/cs_proprocessor-directive.qmd"
     - part: Organization
       chapters: 
         - "content/orgs/cs_orgs.qmd"

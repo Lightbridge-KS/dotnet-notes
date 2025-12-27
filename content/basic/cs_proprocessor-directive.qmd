@@ -1,0 +1,103 @@
+---
+title: "Preprocessor Directives in C#"
+---
+
+Lines that start with `#` in C# are called **preprocessor directives**. They are special instructions to the compiler that are processed *before* the actual compilation of your code.
+
+Let me explain the most common ones:
+
+
+## `#region` and `#endregion`
+
+These are used for **code folding/organization**. They let you collapse and expand sections of code in your IDE.
+
+```csharp
+#region Private Helper Methods
+
+private void ValidateInput(string input)
+{
+    // validation logic
+}
+
+private void LogError(string message)
+{
+    // logging logic
+}
+
+#endregion
+```
+
+**What it looks like in VS Code:**
+
+```
+┌─────────────────────────────────────────┐
+│  ▼ Private Helper Methods               │  ← Expanded (clickable)
+│    private void ValidateInput(...) {}   │
+│    private void LogError(...) {}        │
+└─────────────────────────────────────────┘
+
+┌─────────────────────────────────────────┐
+│  ▶ Private Helper Methods ...           │  ← Collapsed (clickable)
+└─────────────────────────────────────────┘
+```
+
+> **Note:** `#region` has no effect on compilation—it's purely for code organization.
+
+
+## Other Common Preprocessor Directives
+
+| Directive | Purpose |
+|-----------|---------|
+| `#if`, `#else`, `#elif`, `#endif` | Conditional compilation |
+| `#define`, `#undef` | Define/undefine symbols |
+| `#warning` | Emit a compiler warning |
+| `#error` | Emit a compiler error |
+| `#nullable` | Control nullable context |
+| `#pragma` | Special compiler instructions |
+
+
+## Example: Conditional Compilation
+
+```csharp
+#define DEBUG_MODE
+
+public void ProcessData()
+{
+    #if DEBUG_MODE
+        Console.WriteLine("Debug: Processing started...");
+    #endif
+    
+    // actual processing code
+    
+    #if DEBUG_MODE
+        Console.WriteLine("Debug: Processing completed.");
+    #else
+        // production-only code
+    #endif
+}
+```
+
+This is useful when you want different behavior in **Debug** vs **Release** builds.
+
+
+## Key Difference from Comments
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  Comments           vs      Preprocessor Directives      │
+├──────────────────────────────────────────────────────────┤
+│  // single line              #region                     │
+│  /* multi-line */            #if DEBUG                   │
+│                                                          │
+│  → Ignored by compiler       → Processed BEFORE compile  │
+│  → Just for humans           → Can change what compiles  │
+└──────────────────────────────────────────────────────────┘
+```
+
+
+## Practical Tip
+
+In modern C#, `#region` is somewhat debated:
+
+- **Pro:** Helps organize large files
+- **Con:** Can hide code complexity; some prefer smaller classes instead
