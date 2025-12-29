@@ -1,0 +1,231 @@
+---
+title: "Sealed Classes in C#"
+---
+
+A **`sealed`** class is a class that **cannot be inherited**. Once you mark a class as `sealed`, no other class can derive from it.
+
+
+## Basic Syntax
+
+```csharp
+sealed class MyClass
+{
+    // This class cannot be inherited
+}
+
+// ❌ This will cause a compile-time error!
+class DerivedClass : MyClass  // Error: cannot derive from sealed type
+{
+}
+```
+
+
+## Visual Concept
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    INHERITANCE CHAIN                        │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│   ┌──────────────┐                                          │
+│   │   Animal     │  ◄── Base class (can be inherited)       │
+│   └──────┬───────┘                                          │
+│          │                                                  │
+│          ▼                                                  │
+│   ┌──────────────┐                                          │
+│   │     Dog      │  ◄── Derived class (can be inherited)    │
+│   └──────┬───────┘                                          │
+│          │                                                  │
+│          ▼                                                  │
+│   ┌──────────────┐                                          │
+│   │ sealed Poodle│  ◄── Sealed class (🔒 STOPS HERE!)       │
+│   └──────────────┘                                          │
+│          │                                                  │
+│          ✖ No further inheritance allowed                   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+
+## Example Code
+
+```csharp
+// Base class
+public class Animal
+{
+    public virtual void Speak() => Console.WriteLine("Some sound");
+}
+
+// Derived class (can still be inherited)
+public class Dog : Animal
+{
+    public override void Speak() => Console.WriteLine("Woof!");
+}
+
+// Sealed class - inheritance STOPS here
+public sealed class Poodle : Dog
+{
+    public override void Speak() => Console.WriteLine("Fancy Woof!");
+}
+
+// ❌ Compile Error: 'Labradoodle': cannot derive from sealed type 'Poodle'
+// public class Labradoodle : Poodle { }
+```
+
+
+## Sealed Methods
+
+You can also seal **individual methods** in a derived class to prevent further overriding:
+
+```csharp
+public class Animal
+{
+    public virtual void Move() => Console.WriteLine("Moving...");
+}
+
+public class Bird : Animal
+{
+    // This method cannot be overridden in derived classes
+    public sealed override void Move() => Console.WriteLine("Flying!");
+}
+
+public class Penguin : Bird
+{
+    // ❌ Error: cannot override sealed method
+    // public override void Move() => Console.WriteLine("Waddling!");
+}
+```
+
+
+## Best Use Cases
+
+### 1. **Security & Integrity**
+
+Prevent malicious or unintended modifications to critical classes:
+
+```csharp
+public sealed class PasswordValidator
+{
+    public bool Validate(string password)
+    {
+        // Critical validation logic that shouldn't be bypassed
+        return password.Length >= 8 
+            && password.Any(char.IsUpper)
+            && password.Any(char.IsDigit);
+    }
+}
+```
+
+
+### 2. **Immutable Data Classes**
+
+Ensure immutability cannot be broken by inheritance:
+
+```csharp
+public sealed class PatientRecord
+{
+    public string PatientId { get; }
+    public string Name { get; }
+    public DateTime DateOfBirth { get; }
+
+    public PatientRecord(string id, string name, DateTime dob)
+    {
+        PatientId = id;
+        Name = name;
+        DateOfBirth = dob;
+    }
+}
+```
+
+
+### 3. **Utility/Helper Classes**
+
+Classes with only static methods don't need inheritance:
+
+```csharp
+public sealed class DicomHelper
+{
+    public static string ParsePatientName(string dicomTag) 
+    {
+        // Parse DICOM patient name format
+        return dicomTag.Replace("^", " ").Trim();
+    }
+
+    public static double ConvertHounsfieldToLinear(double hu)
+    {
+        return (hu + 1024) / 1024.0;
+    }
+}
+```
+
+
+### 4. **Performance Optimization**
+
+The .NET runtime can optimize sealed classes because it knows no derived types exist:
+
+```csharp
+public sealed class FastImageProcessor
+{
+    // JIT compiler can use direct method calls (devirtualization)
+    // instead of virtual method dispatch
+    public void ProcessPixel(int x, int y)
+    {
+        // High-performance pixel processing
+    }
+}
+```
+
+
+### 5. **API Design - Prevent Extension**
+
+When you want to control exactly how your library is used:
+
+```csharp
+// You provide these specific report types
+public abstract class RadiologyReport { }
+
+public sealed class CTReport : RadiologyReport { }
+public sealed class MRIReport : RadiologyReport { }
+public sealed class XRayReport : RadiologyReport { }
+
+// Users cannot create: class CustomReport : CTReport { }
+```
+
+
+## Real-World Examples in .NET
+
+Many .NET framework classes are sealed:
+
+```csharp
+// These are all sealed in .NET:
+string    // System.String is sealed
+DateTime  // System.DateTime is sealed (struct, implicitly sealed)
+int       // System.Int32 is sealed (struct)
+```
+
+
+## Summary Table
+
+| Aspect | Sealed Class | Regular Class |
+|--------|--------------|---------------|
+| Can be inherited? | ❌ No | ✅ Yes |
+| Performance | 🚀 Slightly faster (devirtualization) | Normal |
+| Security | 🔒 More secure | Can be extended |
+| Flexibility | Less flexible | More flexible |
+
+
+## When to Use `sealed`
+
+```
+Use sealed when:
+├── ✅ Security/integrity is critical
+├── ✅ Class is immutable and should stay that way  
+├── ✅ Class has no virtual members (nothing to override)
+├── ✅ You want to prevent breaking changes in derived classes
+└── ✅ Performance matters (hot paths in code)
+
+Avoid sealed when:
+├── ❌ You're building a framework meant to be extended
+├── ❌ You want to allow customization via inheritance
+└── ❌ Unit testing requires mocking (sealed classes are harder to mock)
+```
