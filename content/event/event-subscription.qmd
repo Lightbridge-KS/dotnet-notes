@@ -1,0 +1,191 @@
+---
+title: "Understanding Event Subscription with Lambda Expressions"
+---
+
+Explain this syntax:
+
+
+```csharp
+        request.OnResponseReceived += (req, response) =>
+        {
+            echoResponse = response;
+            Console.WriteLine($"C-ECHO Response Status: {response.Status}");
+        };
+```
+
+This syntax combines **two important C# concepts**: **Events** and **Lambda Expressions**. Let me break it down step by step.
+
+
+## The Big Picture
+
+```
+request.OnResponseReceived  +=  (req, response) => { ... };
+        │                    │         │              │
+        │                    │         │              └── Lambda body (what to do)
+        │                    │         └── Lambda parameters (inputs)
+        │                    └── Subscribe operator ("add handler")
+        └── Event (something that can happen)
+```
+
+
+## 1. Events in C#
+
+An **event** is like a "notification system" built into an object. When something happens, the object announces it, and any interested code can respond.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    DicomCEchoRequest                        │
+│                                                             │
+│   ┌─────────────────────┐                                   │
+│   │ OnResponseReceived  │ ◄── Event: "I'll notify you       │
+│   │      (Event)        │      when a response arrives"     │
+│   └─────────────────────┘                                   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+                         │
+                         │ When response comes...
+                         ▼
+              ┌──────────────────────┐
+              │  Your Handler Code   │
+              │  gets executed!      │
+              └──────────────────────┘
+```
+
+
+## 2. The `+=` Operator (Subscribe)
+
+The `+=` operator **subscribes** (or "attaches") a handler to an event:
+
+```csharp
+event += handler;  // "When this event fires, run this handler"
+```
+
+Think of it like:
+- **Event** = A mailing list
+- **`+=`** = Subscribe to the mailing list
+- **Handler** = What you do when you receive mail
+
+There's also `-=` to **unsubscribe**:
+```csharp
+event -= handler;  // "Stop notifying me"
+```
+
+
+## 3. Lambda Expression `(parameters) => { body }`
+
+A **lambda expression** is an **anonymous function** (a function without a name). It's a shorthand way to define a method inline.
+
+```
+(req, response) => { echoResponse = response; Console.WriteLine(...); }
+ └────┬───────┘    └─────────────────────┬─────────────────────────┘
+      │                                  │
+ Parameters                         Function body
+ (inputs)                           (what to do)
+```
+
+### Comparison: Traditional Method vs Lambda
+
+```csharp
+// ═══════════════════════════════════════════════════════
+// Option 1: Traditional named method
+// ═══════════════════════════════════════════════════════
+
+void HandleResponse(DicomCEchoRequest req, DicomCEchoResponse response)
+{
+    echoResponse = response;
+    Console.WriteLine($"C-ECHO Response Status: {response.Status}");
+}
+
+request.OnResponseReceived += HandleResponse;
+
+
+// ═══════════════════════════════════════════════════════
+// Option 2: Lambda expression (anonymous - no name needed)
+// ═══════════════════════════════════════════════════════
+
+request.OnResponseReceived += (req, response) =>
+{
+    echoResponse = response;
+    Console.WriteLine($"C-ECHO Response Status: {response.Status}");
+};
+```
+
+Both do **exactly the same thing**! Lambda is just more concise.
+
+
+## 4. Why Use This Pattern?
+
+This is a common **callback pattern** for async operations:
+
+```
+Timeline:
+─────────────────────────────────────────────────────────────────►
+
+  1. Subscribe handler     2. Send request      3. Response arrives
+         │                       │                      │
+         ▼                       ▼                      ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│ request.OnRes.. │    │ client.Send()   │    │ Your lambda     │
+│ += (handler)    │    │                 │    │ executes NOW!   │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+
+## 5. Closure (Capturing Variables)
+
+Notice that the lambda uses `echoResponse` which is defined **outside** the lambda:
+
+```csharp
+DicomCEchoResponse echoResponse = null;  // ◄── Defined here
+
+request.OnResponseReceived += (req, response) =>
+{
+    echoResponse = response;  // ◄── Used inside lambda!
+    // ...
+};
+```
+
+This is called a **closure** — the lambda "captures" and can modify variables from its surrounding scope. This is how the result gets passed back to your main code.
+
+
+## Quick Reference: Lambda Syntax Variations
+
+```csharp
+// Multiple parameters, multiple statements
+(x, y) => { 
+    var sum = x + y;
+    return sum; 
+}
+
+// Multiple parameters, single expression (no braces needed)
+(x, y) => x + y
+
+// Single parameter (parentheses optional)
+x => x * 2
+
+// No parameters
+() => Console.WriteLine("Hello!")
+```
+
+
+## Python Equivalent (for reference)
+
+Since you know Python, here's a rough comparison:
+
+```python
+# Python (using a callback pattern)
+def handle_response(req, response):
+    echo_response = response
+    print(f"Status: {response.status}")
+
+request.on_response_received = handle_response
+
+# Or with lambda (but Python lambdas are limited to one expression)
+request.on_response_received = lambda req, res: print(f"Status: {res.status}")
+```
+
+C# lambdas are more powerful because they can contain multiple statements with `{ }`.
+
+---
+
+**Summary**: This pattern sets up a "listener" that will automatically execute your code when the DICOM server responds to the echo request. It's the standard way to handle asynchronous responses in many C# libraries.

@@ -37,6 +37,10 @@ book:
         - "content/datatypes/interface_IEnumerable.qmd"
         - "content/basic/cs_stack.qmd"
         - "content/datatypes/cs_enums.qmd"
+    - part: Event
+      chapters: 
+        - text: Even Subscription
+          href: "content/event/event-subscription.qmd"
     - part: OOP
       chapters: 
         - "content/oop/cs_classes.qmd"
