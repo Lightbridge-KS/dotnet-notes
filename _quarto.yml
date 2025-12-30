@@ -51,6 +51,8 @@ book:
         - "content/oop/cs_record.qmd"
         - text: Sealed Class
           href: "content/oop/cs_sealed_class.qmd"
+        - text: Interfaces
+          href: "content/oop/cs_interfaces.qmd"
         - "content/oop/cs_methods.qmd"
         - "content/oop/cs_methods_overloading.qmd"
         - "content/oop/cs_method_calling_order.qmd"
