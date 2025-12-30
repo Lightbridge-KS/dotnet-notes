@@ -1,0 +1,262 @@
+---
+title: "Delegates in C#"
+---
+
+Delegates can be confusing at first, but they're a powerful feature. Let me break it down step by step.
+
+
+## What is a Delegate?
+
+Think of a **delegate** as a **"variable that holds a method"** instead of data.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Normal Variable vs Delegate                                │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│   int x = 42;              // x holds a NUMBER              │
+│   string s = "hello";      // s holds a STRING              │
+│   MyDelegate d = SomeMethod; // d holds a METHOD reference  │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+A delegate defines a **method signature** (return type + parameters), and any method matching that signature can be assigned to it.
+
+
+## Basic Example
+
+Let's create a simple console app to demonstrate:
+
+```bash
+mkdir DelegateDemo && cd DelegateDemo
+dotnet new console
+```
+
+Replace `Program.cs` with:
+
+```csharp
+// Step 1: DECLARE a delegate type (defines the "shape" of methods it can hold)
+delegate int MathOperation(int a, int b);
+
+class Program
+{
+    // Step 2: Create methods that MATCH the delegate signature
+    static int Add(int x, int y) => x + y;
+    static int Multiply(int x, int y) => x * y;
+    static int Subtract(int x, int y) => x - y;
+
+    static void Main()
+    {
+        // Step 3: CREATE delegate instance and ASSIGN a method
+        MathOperation operation = Add;
+        
+        // Step 4: INVOKE the delegate (calls the method it holds)
+        int result = operation(5, 3);
+        Console.WriteLine($"Add: {result}");        // Output: Add: 8
+        
+        // You can REASSIGN to a different method
+        operation = Multiply;
+        Console.WriteLine($"Multiply: {operation(5, 3)}");  // Output: Multiply: 15
+        
+        operation = Subtract;
+        Console.WriteLine($"Subtract: {operation(5, 3)}");  // Output: Subtract: 2
+    }
+}
+```
+
+
+## Visualizing How It Works
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  delegate int MathOperation(int a, int b);                           │
+│                                                                      │
+│  This defines a "contract":                                          │
+│  - Must return: int                                                  │
+│  - Must accept: (int, int)                                           │
+└──────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  Any method matching this signature can be assigned:                 │
+│                                                                      │
+│  ✅ int Add(int x, int y)        → Matches!                          │
+│  ✅ int Multiply(int x, int y)   → Matches!                          │
+│  ❌ void Print(string msg)       → Does NOT match (wrong signature)  │
+│  ❌ int GetValue()               → Does NOT match (no parameters)    │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+
+## Multicast Delegates (Multiple Methods)
+
+A delegate can hold **multiple methods** using `+=`. When invoked, ALL methods are called in order:
+
+```csharp
+delegate void Notify(string message);
+
+class Program
+{
+    static void SendEmail(string msg) => Console.WriteLine($"📧 Email: {msg}");
+    static void SendSMS(string msg) => Console.WriteLine($"📱 SMS: {msg}");
+    static void LogToFile(string msg) => Console.WriteLine($"📝 Log: {msg}");
+
+    static void Main()
+    {
+        // Combine multiple methods
+        Notify notifier = SendEmail;
+        notifier += SendSMS;
+        notifier += LogToFile;
+
+        // One call invokes ALL three methods
+        notifier("Server is down!");
+        
+        // Output:
+        // 📧 Email: Server is down!
+        // 📱 SMS: Server is down!
+        // 📝 Log: Server is down!
+        
+        // Remove a method
+        notifier -= SendSMS;
+        Console.WriteLine("\n--- After removing SMS ---");
+        notifier("Server recovered");
+        
+        // Output:
+        // 📧 Email: Server recovered
+        // 📝 Log: Server recovered
+    }
+}
+```
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Multicast Delegate: Invocation List                    │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  notifier ──┬──▶ SendEmail()                            │
+│             │                                           │
+│             ├──▶ SendSMS()     (called in order)        │
+│             │                                           │
+│             └──▶ LogToFile()                            │
+│                                                         │
+│  notifier("msg") calls ALL methods with same argument   │
+└─────────────────────────────────────────────────────────┘
+```
+
+
+## Built-in Delegates: `Action`, `Func`, `Predicate`
+
+C# provides pre-defined delegates so you don't always need to declare your own:
+
+| Delegate | Signature | Use Case |
+|----------|-----------|----------|
+| `Action` | Returns `void` | Side effects (print, log, etc.) |
+| `Func<T, TResult>` | Returns a value | Calculations, transformations |
+| `Predicate<T>` | Returns `bool` | Filtering, conditions |
+
+```csharp
+class Program
+{
+    static void Main()
+    {
+        // Action: void method (no return)
+        Action<string> greet = name => Console.WriteLine($"Hello, {name}!");
+        greet("Dr. KS");  // Output: Hello, Dr. KS!
+
+        // Func: method that returns a value
+        // Func<input1, input2, ..., RETURN_TYPE>
+        Func<int, int, int> add = (a, b) => a + b;
+        Console.WriteLine(add(10, 20));  // Output: 30
+
+        // Predicate: method that returns bool (for filtering)
+        Predicate<int> isEven = num => num % 2 == 0;
+        Console.WriteLine(isEven(4));   // Output: True
+        Console.WriteLine(isEven(7));   // Output: False
+
+        // Real use: filtering a list
+        List<int> numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        List<int> evenNumbers = numbers.FindAll(isEven);
+        Console.WriteLine(string.Join(", ", evenNumbers));  // Output: 2, 4, 6, 8, 10
+    }
+}
+```
+
+
+## Practical Use Case: Callback Pattern
+
+Delegates are commonly used for **callbacks** — passing a method to be called later:
+
+```csharp
+class ImageProcessor
+{
+    // Accept a callback to report progress
+    public void ProcessImages(string[] files, Action<string, int> onProgress)
+    {
+        for (int i = 0; i < files.Length; i++)
+        {
+            // Simulate processing
+            Thread.Sleep(500);
+            
+            // Call the delegate to report progress
+            int percent = (i + 1) * 100 / files.Length;
+            onProgress(files[i], percent);
+        }
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        var processor = new ImageProcessor();
+        string[] dicomFiles = ["scan_001.dcm", "scan_002.dcm", "scan_003.dcm"];
+
+        // Pass a lambda as the callback
+        processor.ProcessImages(dicomFiles, (fileName, progress) =>
+        {
+            Console.WriteLine($"Processing {fileName}... {progress}% complete");
+        });
+    }
+}
+```
+
+Output:
+```
+Processing scan_001.dcm... 33% complete
+Processing scan_002.dcm... 66% complete
+Processing scan_003.dcm... 100% complete
+```
+
+
+## Summary
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│  DELEGATES SUMMARY                                                 │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│  1. Delegate = Type-safe method reference (like function pointer)  │
+│                                                                    │
+│  2. Declaration:  delegate ReturnType Name(parameters);            │
+│                                                                    │
+│  3. Assignment:   MyDelegate d = SomeMethod;                       │
+│                                                                    │
+│  4. Invocation:   d(args);  // calls the method                    │
+│                                                                    │
+│  5. Multicast:    d += AnotherMethod;  // chain multiple methods   │
+│                                                                    │
+│  6. Built-in:     Action (void), Func (returns T), Predicate (bool)│
+│                                                                    │
+│  7. Use cases:    Callbacks, Event handlers, LINQ operations       │
+└────────────────────────────────────────────────────────────────────┘
+```
+
+
+## Next Steps
+
+Once you're comfortable with delegates, the natural progression is:
+
+1. **Events** — built on top of delegates (publisher/subscriber pattern)
+2. **Lambda expressions** — shorthand syntax for inline delegates
+3. **LINQ** — heavily uses `Func<>` and `Predicate<>`

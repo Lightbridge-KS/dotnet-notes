@@ -39,6 +39,10 @@ book:
         - "content/datatypes/cs_enums.qmd"
         - text: Bit field Enums
           href: "content/datatypes/cs_enums_bitfield.qmd"
+        - text: Delegates
+          href: "content/datatypes/cs_delegates.qmd"
+        - text: Events
+          href: "content/datatypes/cs_events.qmd"
     - part: Event
       chapters: 
         - text: Even Subscription

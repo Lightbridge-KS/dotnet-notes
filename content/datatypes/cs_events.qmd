@@ -1,0 +1,420 @@
+---
+title: "Events in C#"
+---
+
+Events build directly on delegates. Now that you understand delegates, events will make a lot of sense!
+
+
+## Why Events? (The Problem with Plain Delegates)
+
+With plain delegates, any code can **invoke** or **overwrite** the delegate:
+
+```csharp
+// Using plain delegate (problematic)
+class Button
+{
+    public Action? OnClick;  // Anyone can access this!
+}
+
+class Program
+{
+    static void Main()
+    {
+        var button = new Button();
+        button.OnClick = () => Console.WriteLine("Clicked!");
+        
+        // PROBLEM 1: External code can OVERWRITE all subscribers
+        button.OnClick = () => Console.WriteLine("I replaced everyone!");
+        
+        // PROBLEM 2: External code can INVOKE the delegate directly
+        button.OnClick?.Invoke();  // Fake click from outside!
+    }
+}
+```
+
+**Events** solve this by adding restrictions:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  DELEGATE vs EVENT                                                  │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  Plain Delegate:                                                    │
+│    ✅ Subscribe:   obj.OnClick += Handler;                          │
+│    ✅ Unsubscribe: obj.OnClick -= Handler;                          │
+│    ⚠️ Overwrite:   obj.OnClick = Handler;     ← Can replace all!    │
+│    ⚠️ Invoke:      obj.OnClick();             ← Can trigger from    │
+│                                                  outside!           │
+│                                                                     │
+│  Event:                                                             │
+│    ✅ Subscribe:   obj.OnClick += Handler;                          │
+│    ✅ Unsubscribe: obj.OnClick -= Handler;                          │
+│    ❌ Overwrite:   obj.OnClick = Handler;     ← Compile error!      │
+│    ❌ Invoke:      obj.OnClick();             ← Compile error!      │
+│                                                  (only owner can)   │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+
+## Publisher/Subscriber Pattern
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  PUBLISHER / SUBSCRIBER PATTERN                                     │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│                      ┌─────────────────┐                            │
+│                      │   PUBLISHER     │                            │
+│                      │   (Event Owner) │                            │
+│                      │                 │                            │
+│                      │  - Defines event│                            │
+│                      │  - Raises event │                            │
+│                      └────────┬────────┘                            │
+│                               │                                     │
+│                          event fires                                │
+│                               │                                     │
+│              ┌────────────────┼────────────────┐                    │
+│              ▼                ▼                ▼                    │
+│      ┌──────────────┐ ┌──────────────┐ ┌──────────────┐             │
+│      │ SUBSCRIBER 1 │ │ SUBSCRIBER 2 │ │ SUBSCRIBER 3 │             │
+│      │              │ │              │ │              │             │
+│      │ LogToFile()  │ │ SendEmail()  │ │ UpdateUI()   │             │
+│      └──────────────┘ └──────────────┘ └──────────────┘             │
+│                                                                     │
+│  - Subscribers don't know about each other                          │
+│  - Publisher doesn't know WHO is listening                          │
+│  - Loose coupling!                                                  │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+
+## Basic Event Syntax
+
+```bash
+mkdir EventDemo && cd EventDemo
+dotnet new console
+```
+
+```csharp
+// Step 1: Define a delegate type (or use built-in EventHandler)
+delegate void ThresholdReachedHandler(string message);
+
+// PUBLISHER class
+class Counter
+{
+    private int _count = 0;
+    private int _threshold;
+
+    // Step 2: Declare the EVENT using the delegate type
+    public event ThresholdReachedHandler? ThresholdReached;
+
+    public Counter(int threshold)
+    {
+        _threshold = threshold;
+    }
+
+    public void Increment()
+    {
+        _count++;
+        Console.WriteLine($"Count: {_count}");
+
+        if (_count >= _threshold)
+        {
+            // Step 3: RAISE the event (only the owner can do this)
+            ThresholdReached?.Invoke($"Threshold {_threshold} reached!");
+        }
+    }
+}
+
+// SUBSCRIBER class
+class Program
+{
+    static void Main()
+    {
+        var counter = new Counter(threshold: 3);
+
+        // Step 4: SUBSCRIBE to the event
+        counter.ThresholdReached += OnThresholdReached;
+        counter.ThresholdReached += msg => Console.WriteLine($"[Lambda] {msg}");
+
+        counter.Increment();  // Count: 1
+        counter.Increment();  // Count: 2
+        counter.Increment();  // Count: 3  → Events fire!
+
+        // These would cause COMPILE ERRORS:
+        // counter.ThresholdReached("fake!");           // ❌ Can't invoke from outside
+        // counter.ThresholdReached = OnThresholdReached; // ❌ Can't overwrite with =
+    }
+
+    // Event handler method
+    static void OnThresholdReached(string message)
+    {
+        Console.WriteLine($"[Handler] {message}");
+    }
+}
+```
+
+Output:
+```
+Count: 1
+Count: 2
+Count: 3
+[Handler] Threshold 3 reached!
+[Lambda] Threshold 3 reached!
+```
+
+
+## Standard .NET Event Pattern
+
+In real-world .NET, events follow a **convention** using `EventHandler` or `EventHandler<TEventArgs>`:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  .NET EVENT CONVENTION                                              │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  delegate void EventHandler(object? sender, EventArgs e);           │
+│                                       │            │                │
+│                                       │            └─ Event data    │
+│                                       └─ Who raised the event       │
+│                                                                     │
+│  For custom data:                                                   │
+│  delegate void EventHandler<TEventArgs>(object? sender, TEventArgs e);│
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Example with Custom EventArgs
+
+```csharp
+// Custom event data class
+class ScanCompletedEventArgs : EventArgs
+{
+    public string PatientId { get; }
+    public string Modality { get; }
+    public int ImageCount { get; }
+    public DateTime CompletedAt { get; }
+
+    public ScanCompletedEventArgs(string patientId, string modality, int imageCount)
+    {
+        PatientId = patientId;
+        Modality = modality;
+        ImageCount = imageCount;
+        CompletedAt = DateTime.Now;
+    }
+}
+
+// PUBLISHER: The scanner
+class DicomScanner
+{
+    // Standard event pattern: EventHandler<TEventArgs>
+    public event EventHandler<ScanCompletedEventArgs>? ScanCompleted;
+    public event EventHandler<int>? ProgressChanged;  // Simple built-in type
+
+    public void PerformScan(string patientId, string modality, int slices)
+    {
+        Console.WriteLine($"Starting {modality} scan for patient {patientId}...\n");
+
+        for (int i = 1; i <= slices; i++)
+        {
+            Thread.Sleep(300);  // Simulate scanning
+
+            // Raise progress event
+            int percent = i * 100 / slices;
+            ProgressChanged?.Invoke(this, percent);
+        }
+
+        // Raise completion event with custom data
+        var args = new ScanCompletedEventArgs(patientId, modality, slices);
+        ScanCompleted?.Invoke(this, args);
+    }
+}
+
+// SUBSCRIBERS
+class NotificationService
+{
+    public void OnScanCompleted(object? sender, ScanCompletedEventArgs e)
+    {
+        Console.WriteLine($"\n📧 Notification: {e.Modality} scan completed");
+        Console.WriteLine($"   Patient: {e.PatientId}");
+        Console.WriteLine($"   Images: {e.ImageCount}");
+        Console.WriteLine($"   Time: {e.CompletedAt:HH:mm:ss}");
+    }
+}
+
+class AiAnalysisService
+{
+    public void OnScanCompleted(object? sender, ScanCompletedEventArgs e)
+    {
+        Console.WriteLine($"\n🤖 AI Analysis queued for {e.ImageCount} images");
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        // Create publisher
+        var scanner = new DicomScanner();
+
+        // Create subscribers
+        var notifier = new NotificationService();
+        var aiService = new AiAnalysisService();
+
+        // Subscribe to events
+        scanner.ScanCompleted += notifier.OnScanCompleted;
+        scanner.ScanCompleted += aiService.OnScanCompleted;
+        scanner.ProgressChanged += (sender, percent) =>
+        {
+            Console.Write($"\rProgress: {percent}%");
+        };
+
+        // Run the scan
+        scanner.PerformScan("P-12345", "CT Chest", 5);
+    }
+}
+```
+
+Output:
+```
+Starting CT scan for patient P-12345...
+
+Progress: 100%
+📧 Notification: CT Chest scan completed
+   Patient: P-12345
+   Images: 5
+   Time: 14:32:15
+
+🤖 AI Analysis queued for 5 images
+```
+
+
+## Unsubscribing from Events (Important!)
+
+Always unsubscribe to prevent **memory leaks**:
+
+```csharp
+class Program
+{
+    static void Main()
+    {
+        var scanner = new DicomScanner();
+        
+        // Subscribe
+        EventHandler<ScanCompletedEventArgs> handler = OnScanCompleted;
+        scanner.ScanCompleted += handler;
+
+        // ... do work ...
+
+        // Unsubscribe when done (important for long-lived publishers!)
+        scanner.ScanCompleted -= handler;
+    }
+
+    static void OnScanCompleted(object? sender, ScanCompletedEventArgs e)
+    {
+        Console.WriteLine("Scan done!");
+    }
+}
+```
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  WHY UNSUBSCRIBE?                                                   │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  Publisher holds REFERENCES to all subscribers                      │
+│                                                                     │
+│  If subscriber should be garbage collected but is still             │
+│  subscribed → MEMORY LEAK (publisher keeps it alive)                │
+│                                                                     │
+│  Common in UI apps: Window closes but event handlers remain         │
+│                                                                     │
+│  Rule: If publisher outlives subscriber → UNSUBSCRIBE!              │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+
+## Complete Pattern: Protected Virtual Method
+
+The recommended pattern for classes that might be inherited:
+
+```csharp
+class DicomScanner
+{
+    public event EventHandler<ScanCompletedEventArgs>? ScanCompleted;
+
+    // Protected virtual method to raise the event
+    // Allows derived classes to override behavior
+    protected virtual void OnScanCompleted(ScanCompletedEventArgs e)
+    {
+        ScanCompleted?.Invoke(this, e);
+    }
+
+    public void PerformScan(string patientId, string modality, int slices)
+    {
+        // ... scanning logic ...
+
+        // Use the protected method to raise event
+        OnScanCompleted(new ScanCompletedEventArgs(patientId, modality, slices));
+    }
+}
+
+// Derived class can extend behavior
+class AdvancedScanner : DicomScanner
+{
+    protected override void OnScanCompleted(ScanCompletedEventArgs e)
+    {
+        Console.WriteLine("Pre-processing before notifying subscribers...");
+        base.OnScanCompleted(e);  // Call base to fire the event
+        Console.WriteLine("Post-processing after notifying subscribers...");
+    }
+}
+```
+
+
+## Event Flow Summary
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  EVENT LIFECYCLE                                                    │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  1. DECLARE event in publisher:                                     │
+│     public event EventHandler<MyArgs>? MyEvent;                     │
+│                                                                     │
+│  2. SUBSCRIBE in consumer:                                          │
+│     publisher.MyEvent += MyHandler;                                 │
+│                                                                     │
+│  3. RAISE event in publisher (when something happens):              │
+│     MyEvent?.Invoke(this, new MyArgs(...));                         │
+│                                                                     │
+│  4. HANDLER executes in subscriber:                                 │
+│     void MyHandler(object? sender, MyArgs e) { ... }                │
+│                                                                     │
+│  5. UNSUBSCRIBE when done:                                          │
+│     publisher.MyEvent -= MyHandler;                                 │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+
+## Comparison Summary
+
+| Aspect | Delegate | Event |
+|--------|----------|-------|
+| External Subscribe (`+=`) | ✅ Yes | ✅ Yes |
+| External Unsubscribe (`-=`) | ✅ Yes | ✅ Yes |
+| External Invoke | ✅ Yes (risky) | ❌ No |
+| External Overwrite (`=`) | ✅ Yes (risky) | ❌ No |
+| Encapsulation | Low | High |
+| Use case | Callbacks, LINQ | Notifications, UI |
+
+
+## Next Steps
+
+Now that you understand events, the natural progression is:
+
+1. **Lambda expressions** — cleaner syntax for event handlers
+2. **Async events** — handling async/await with events
+3. **INotifyPropertyChanged** — events in data binding (WPF/MAUI)
+4. **Weak events** — avoiding memory leaks in complex scenarios
