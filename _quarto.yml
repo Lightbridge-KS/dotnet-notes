@@ -37,6 +37,8 @@ book:
         - "content/datatypes/interface_IEnumerable.qmd"
         - "content/basic/cs_stack.qmd"
         - "content/datatypes/cs_enums.qmd"
+        - text: Bit field Enums
+          href: "content/datatypes/cs_enums_bitfield.qmd"
     - part: Event
       chapters: 
         - text: Even Subscription

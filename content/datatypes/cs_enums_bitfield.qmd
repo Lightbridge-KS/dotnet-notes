@@ -1,0 +1,171 @@
+---
+title: "Bit Field Enums in C#"
+---
+
+Think of it like **checkboxes** vs **radio buttons**:
+
+```
+Traditional Enum = Radio Buttons     Bit Field Enum = Checkboxes
+(pick ONE)                           (pick MANY)
+
+    ○ HorseRadish                        ☑ Summer
+    ● Radish        ← selected           ☑ Autumn
+    ○ Turnip                             ☐ Winter
+                                         ☐ Spring
+```
+
+A **bit field** (also called a "flag enum") is an enumeration where each value represents a single bit position, allowing you to **combine multiple values** into a single variable using bitwise operations.
+
+::: {.callout-note appearance="default" collapse="true"}
+Q: Explain what the "A bit field" is from these enums:
+
+```csharp
+using System;
+using System.Collections.Generic;
+
+// A traditional enumeration of some root vegetables.
+public enum SomeRootVegetables
+{
+    HorseRadish,
+    Radish,
+    Turnip
+}
+
+// A bit field or flag enumeration of harvesting seasons.
+[Flags]
+public enum Seasons
+{
+    None = 0,
+    Summer = 1,
+    Autumn = 2,
+    Winter = 4,
+    Spring = 8,
+    All = Summer | Autumn | Winter | Spring
+}
+```
+:::
+
+## Traditional Enum vs Bit Field Enum
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        TRADITIONAL ENUM                                     │
+│                     (SomeRootVegetables)                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Can hold ONLY ONE value at a time                                          │
+│                                                                             │
+│  HorseRadish = 0                                                            │
+│  Radish      = 1                                                            │
+│  Turnip      = 2                                                            │
+│                                                                             │
+│  var veg = SomeRootVegetables.Radish;  // Just "Radish", nothing else       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         BIT FIELD ENUM                                      │
+│                    [Flags] Seasons                                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Can hold MULTIPLE values combined together                                 │
+│                                                                             │
+│  var harvest = Seasons.Summer | Seasons.Autumn;  // "Summer, Autumn"        │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+
+## Why Powers of 2?
+
+Each value must be a **power of 2** so that each occupies a unique bit position:
+
+```
+Value      Decimal    Binary (8-bit)
+─────────────────────────────────────
+None    =    0        0 0 0 0 0 0 0 0
+Summer  =    1        0 0 0 0 0 0 0 1
+Autumn  =    2        0 0 0 0 0 0 1 0
+Winter  =    4        0 0 0 0 0 1 0 0
+Spring  =    8        0 0 0 0 1 0 0 0
+                              ↑ ↑ ↑ ↑
+                              │ │ │ └── Summer bit
+                              │ │ └──── Autumn bit
+                              │ └────── Winter bit
+                              └──────── Spring bit
+```
+
+
+## How Combining Works (Bitwise OR `|`)
+
+```
+Summer | Autumn = ?
+
+  Summer:   0 0 0 0 0 0 0 1
+  Autumn:   0 0 0 0 0 0 1 0
+            ─────────────────  (OR each column)
+  Result:   0 0 0 0 0 0 1 1   = 3 (decimal)
+
+This single number "3" represents BOTH Summer AND Autumn!
+```
+
+```
+All = Summer | Autumn | Winter | Spring
+
+  Summer:   0 0 0 0 0 0 0 1
+  Autumn:   0 0 0 0 0 0 1 0
+  Winter:   0 0 0 0 0 1 0 0
+  Spring:   0 0 0 0 1 0 0 0
+            ─────────────────
+  All:      0 0 0 0 1 1 1 1   = 15 (decimal)
+```
+
+
+## Practical Example
+
+```csharp
+// Combine multiple seasons
+Seasons harvestTime = Seasons.Summer | Seasons.Autumn;
+
+Console.WriteLine(harvestTime);           // Output: "Summer, Autumn"
+Console.WriteLine((int)harvestTime);      // Output: 3
+
+// Check if a specific flag is set (using HasFlag)
+if (harvestTime.HasFlag(Seasons.Summer))
+{
+    Console.WriteLine("Harvest in summer!");  // This prints
+}
+
+if (harvestTime.HasFlag(Seasons.Winter))
+{
+    Console.WriteLine("Harvest in winter!");  // This does NOT print
+}
+
+// Add a season (bitwise OR)
+harvestTime |= Seasons.Spring;
+Console.WriteLine(harvestTime);           // Output: "Summer, Autumn, Spring"
+
+// Remove a season (bitwise AND with NOT)
+harvestTime &= ~Seasons.Summer;
+Console.WriteLine(harvestTime);           // Output: "Autumn, Spring"
+```
+
+
+## The `[Flags]` Attribute
+
+The `[Flags]` attribute tells the compiler:
+
+1. This enum is intended to be used as a bit field
+2. When you call `.ToString()`, it should display combined values nicely (e.g., `"Summer, Autumn"` instead of just `"3"`)
+
+```csharp
+// Without [Flags]: prints "3"
+// With [Flags]:    prints "Summer, Autumn"
+```
+
+
+## Real-World Analogy
+
+
+This is commonly used for things like:
+
+- File permissions (Read, Write, Execute)
+- UI options (Bold, Italic, Underline)
+- Days of the week
+- Feature flags
