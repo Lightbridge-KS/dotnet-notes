@@ -1,0 +1,194 @@
+---
+title: "Monotonic Clock and `Stopwatch` in .NET"
+---
+
+## 1. Two kinds of clocks
+
+Your computer keeps two different kinds of time, and they answer different questions.
+
+```
+┌─────────────────────────────┐      ┌─────────────────────────────┐
+│        WALL CLOCK           │      │      MONOTONIC CLOCK        │
+│  DateTime.Now / UtcNow      │      │  Stopwatch                  │
+├─────────────────────────────┤      ├─────────────────────────────┤
+│ Q: "What time is it?"       │      │ Q: "How much time passed?"  │
+│ Has meaning: 2026-10-01     │      │ Arbitrary origin (e.g. boot)│
+│ Can JUMP forward/backward   │      │ Only moves FORWARD, steadily│
+│ Good for: timestamps, logs  │      │ Good for: durations, timeouts│
+└─────────────────────────────┘      └─────────────────────────────┘
+```
+
+A monotonic clock is a counter that only ever increases, at a steady rate. Its raw value means nothing by itself, such as "123,456,789,000 ticks since some unspecified point". Only the difference between two readings is meaningful.
+
+## 2. Why the wall clock is dangerous for measuring time
+
+The wall clock can be changed while your code is running. This happens in several ways:
+
+- NTP sync can correct clock drift by a few ms or seconds.
+- A user or admin can manually change the time.
+- `DateTime.Now` (local time) shifts by an hour at daylight saving time transitions.
+- A VM can resume from a snapshot or pause.
+
+Here is what that looks like:
+
+```
+Real time     ──────────────────────────────────────────▶
+               start                              end
+                 │       (NTP corrects -2s)        │
+Wall clock    10:00:00 ─────── 10:00:03 ↘ 10:00:01 ─── 10:00:02
+                                                  
+  end - start  = 2 s      ❌ (actually took 4 s)
+  could even be NEGATIVE  ❌ if the jump is big enough
+
+Monotonic     1000 ────────────────────────────────── 5000 (ms ticks)
+  end - start  = 4 s      ✅ unaffected by clock changes
+```
+
+So this common pattern is subtly wrong:
+
+```csharp
+// ❌ Don't measure durations with the wall clock
+var start = DateTime.Now;
+DoWork();
+var elapsed = DateTime.Now - start;   // may be wrong, even negative
+```
+
+## 3. `Stopwatch`: .NET's monotonic, high-resolution timer
+
+`System.Diagnostics.Stopwatch` wraps the operating system's monotonic high-resolution counter:
+
+```
+              Stopwatch
+                  │
+   ┌──────────────┼───────────────────┐
+   ▼              ▼                   ▼
+Windows        Linux               macOS (your M3)
+QueryPerf-     clock_gettime       OS monotonic
+Counter()      (CLOCK_MONOTONIC)   counter (nanosecond-scale)
+```
+
+### Basic instance usage
+
+```csharp
+using System.Diagnostics;
+
+var sw = Stopwatch.StartNew();   // create + start
+
+DoWork();
+
+sw.Stop();
+Console.WriteLine($"Took {sw.Elapsed.TotalMilliseconds:F3} ms");
+Console.WriteLine($"Took {sw.ElapsedMilliseconds} ms");   // long, truncated
+```
+
+Useful members:
+
+| Member | Meaning |
+|---|---|
+| `Start()` / `Stop()` | Resume / pause accumulating time |
+| `Reset()` | Stop and zero |
+| `Restart()` | Zero and start again (handy for laps) |
+| `Elapsed` | `TimeSpan` (most convenient) |
+| `ElapsedMilliseconds` | `long` ms |
+| `ElapsedTicks` | Raw counter ticks (see gotcha below) |
+| `IsRunning` | Whether it is running |
+
+### Static, allocation-free usage (.NET 7+, preferred in hot paths)
+
+You don't even need an object. Just grab timestamps:
+
+```csharp
+long start = Stopwatch.GetTimestamp();
+
+DoWork();
+
+TimeSpan elapsed = Stopwatch.GetElapsedTime(start);
+Console.WriteLine($"Took {elapsed.TotalMilliseconds:F3} ms");
+```
+
+This is great for logging middleware, or anything called millions of times, since `Stopwatch` is a class and `GetTimestamp()` is just a `long`.
+
+## 4. Classic gotcha: two kinds of "ticks"
+
+This trips up many people:
+
+```
+Stopwatch.ElapsedTicks   → raw counter ticks, rate = Stopwatch.Frequency (per second)
+TimeSpan.Ticks           → always 100 ns units (10,000,000 per second)
+```
+
+They are not the same unit unless the frequency happens to be 10 MHz.
+
+```csharp
+Console.WriteLine(Stopwatch.Frequency);        // e.g. 1_000_000_000 on macOS (ns)
+Console.WriteLine(Stopwatch.IsHighResolution); // True
+
+// ❌ Wrong: treating Stopwatch ticks as TimeSpan ticks
+var wrong = new TimeSpan(sw.ElapsedTicks);
+
+// ✅ Right: use Elapsed, or convert manually
+var right = sw.Elapsed;
+double seconds = (double)sw.ElapsedTicks / Stopwatch.Frequency;
+```
+
+Rule of thumb: use `Elapsed` or `GetElapsedTime()` and you'll never hit this.
+
+## 5. Other monotonic options in .NET
+
+| API | Resolution | Notes |
+|---|---|---|
+| `Stopwatch` / `GetTimestamp()` | Sub-µs (ns on macOS) | Best general choice |
+| `Environment.TickCount64` | ~ms (OS dependent) | Cheap, coarse; good for timeouts |
+| `TimeProvider.System.GetTimestamp()` (.NET 8+) | Same as Stopwatch | **Testable** abstraction |
+
+### `TimeProvider`: the clean-architecture way
+
+Since you care about SOLID, this one matters. Hard-coding `Stopwatch` or `DateTime.UtcNow` makes time-dependent code hard to unit test. .NET 8 introduced `TimeProvider`, which you can inject as a dependency:
+
+```csharp
+public sealed class RequestTimer(TimeProvider clock)
+{
+    public TimeSpan Measure(Action action)
+    {
+        long start = clock.GetTimestamp();          // monotonic
+        action();
+        return clock.GetElapsedTime(start);
+    }
+}
+
+// Production
+var timer = new RequestTimer(TimeProvider.System);
+```
+
+In tests, you inject `FakeTimeProvider` (from the `Microsoft.Extensions.TimeProvider.Testing` package) and advance time manually with `fake.Advance(TimeSpan.FromSeconds(5))`. There's no real waiting and the tests are deterministic. `TimeProvider` exposes both kinds of clock: `GetUtcNow()` for wall time and `GetTimestamp()` for monotonic time.
+
+## 6. Practical caveats
+
+1. **Not a benchmarking tool.** Wrapping one call in a `Stopwatch` measures JIT compilation, cache warm-up, GC pauses, and so on. For serious micro-benchmarks, use **BenchmarkDotNet**, which handles warm-up, iterations, and statistics.
+2. **Not thread-safe.** Don't `Start`/`Stop` one instance from multiple threads. Use per-thread timestamps instead.
+3. **Sleep behavior is platform-dependent.** Whether the counter advances while the machine is asleep varies by OS. This rarely matters for in-process timing.
+4. **Never use it for "time of day".** The raw value has no calendar meaning. Pair it with `DateTime.UtcNow` if you need both, for example "started at 10:00 UTC, took 3.2 s".
+
+## 7. Summary
+
+```
+Need "WHEN did it happen?"     → DateTime.UtcNow / DateTimeOffset.UtcNow  (wall clock)
+Need "HOW LONG did it take?"   → Stopwatch.GetTimestamp() + GetElapsedTime (monotonic)
+Need it testable / injectable  → TimeProvider
+Need rigorous perf numbers     → BenchmarkDotNet
+```
+
+A quick experiment to try on your Mac:
+
+```csharp
+using System.Diagnostics;
+
+Console.WriteLine($"Frequency: {Stopwatch.Frequency:N0} ticks/s");
+Console.WriteLine($"High-res:  {Stopwatch.IsHighResolution}");
+
+long t0 = Stopwatch.GetTimestamp();
+Thread.Sleep(100);
+Console.WriteLine($"Slept ≈ {Stopwatch.GetElapsedTime(t0).TotalMilliseconds:F3} ms");
+```
+
+You'll notice the sleep is never exactly 100.000 ms. That's OS scheduling, and seeing it is part of the lesson. Next time, we could look at how `CancellationTokenSource(TimeSpan)` and `PeriodicTimer` use monotonic time under the hood.

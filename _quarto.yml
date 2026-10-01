@@ -106,6 +106,10 @@ book:
         - "content/blazor/basic/blazor-repo-architect.qmd"
         - "content/blazor/basic/razor-syntax.qmd"
         - "content/blazor/basic/blazor-compose-component.qmd"
+    - part: Time
+      chapters: 
+        - text: Monotonic Clock
+          href: "content/time/monotonic-clock.qmd"
 
 format:
   html:
